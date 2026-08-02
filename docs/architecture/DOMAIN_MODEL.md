@@ -1,16 +1,28 @@
 # RelayOS domain model
 
-This is the canonical future domain vocabulary. It is not a database schema and does not authorize implementation beyond the active [execution plan](../exec-plans/README.md). Exact types may evolve, but the approval, provenance, and visibility semantics are architectural constraints.
+This is the canonical domain vocabulary. It is not a database schema and does not authorize implementation beyond the active [execution plan](../exec-plans/README.md). Phase 1 implements the entities explicitly labeled below; the remaining entities describe later V1 boundaries. Exact types may evolve, but approval, provenance, versioning, and visibility semantics are architectural constraints.
 
 ## Shared concepts
 
-Every record has an immutable identifier and relevant `companyId`, `roleId`, creation time, and revision identifier. The first version operates with one company and one Home-Service Office Manager / Dispatcher role, but explicit scope prevents accidental cross-role retrieval later.
+Every record has an immutable identifier and the company/role scope, timestamps, and version fields relevant to that record. Phase 1 operates with exactly one company and one Home-Service Office Manager / Dispatcher role, but it validates explicit IDs to prevent cross-scope relationships.
 
-Knowledge revisions use `pending_review`, `approved`, `rejected`, or `superseded` where applicable. State is derived from immutable revisions and append-only `ApprovalDecision` records; an origin such as `source_extracted`, `owner_authored`, or `generated` never changes. Publishing requires a source-provenance chain and owner approval. Rejection preserves the revision and evidence but excludes it from employee retrieval.
+Phase 1 `KnowledgeClaim.lifecycleStatus` is one of `extracted`, `proposed`, `approved`, `rejected`, `missing-information`, `conflicting-information`, or `superseded`. `provenance` records how the statement arose and never implies approval. Only the domain service may make lifecycle transitions; invalid transitions return a typed domain error. Approval requires source references plus a separately appended `ApprovalDecision`.
+
+The permitted lifecycle graph is deliberately small:
+
+- direct resolution may move `extracted`, `missing-information`, or `conflicting-information` to `proposed`;
+- evidence review may move `proposed` to `missing-information` or `conflicting-information`;
+- an explicit rejection decision may move `extracted`, `proposed`, `missing-information`, or `conflicting-information` to `rejected`;
+- an explicit source-backed approval decision may move only `proposed` to `approved`; and
+- `superseded` is reachable only when approval of a revision succeeds.
+
+There are no generic transitions out of `approved`, `rejected`, or `superseded`. A rejected revision leaves the prior approved version current.
+
+Approved claims are immutable versions. A revision creates a new claim with an incremented `version` and `supersedesClaimId` pointing to the prior approved claim. The prior claim remains approved and current until the revision is successfully approved; that workflow then marks the prior version `superseded`. Rejection preserves the candidate, evidence, and decision but excludes it from employee visibility.
 
 The required distinctions are structural:
 
-- **Source material:** `SourceDocument` plus immutable `SourceReference` locators.
+- **Source material:** Phase 1 uses manually entered immutable `SourceReference` metadata. `SourceDocument` content and ingestion remain future work.
 - **Extracted claims:** `KnowledgeClaim` with extracted origin and an unapproved initial state.
 - **Generated proposals:** `ImprovementProposal` with generation metadata and evidence links.
 - **Owner-approved knowledge:** an approved revision plus its sources and approval decisions.
@@ -22,19 +34,21 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 
 ## Organization and identity
 
-### Company
+### Company (Phase 1)
 
 - **Purpose:** Owns the operational knowledge and defines its business context.
-- **Important fields:** `id`, `name`, `status`; lifecycle is `active -> archived`.
-- **Relationships:** Has roles, users, sources, and activity events; V1 has exactly one active company.
-- **Provenance:** Company metadata is not policy evidence; changes require actor/time audit events.
+- **Important fields:** `id`, `name`, `industry`, `serviceArea`, contact phone and email, `operatingTimezone`, `createdAt`, `updatedAt`.
+- **Relationships:** Owns the single Phase 1 role and scopes knowledge claims. The repository accepts only one company.
+- **Lifecycle:** Phase 1 creates or replaces the session draft through setup; durable archival is future work.
+- **Provenance:** Owner-entered company metadata is operational context, not source evidence. Timestamps identify the in-session record but are not a durable audit log.
 
-### Role
+### Role (Phase 1)
 
 - **Purpose:** Defines the operational job being transferred.
-- **Important fields:** `id`, `companyId`, `name`, `description`, `status`; lifecycle is `draft -> active -> retired`.
-- **Relationships:** Owns responsibilities, knowledge, questions, training, and metrics; V1 has one Home-Service Office Manager / Dispatcher role.
-- **Provenance:** Role policy fields require source references and approval; display metadata requires an audit trail.
+- **Important fields:** `id`, `companyId`, `title`, `mission`, status (`draft`, `active`, or `retired`), `responsibilities`, `authorityBoundaries`, `escalationRules`, `createdAt`, `updatedAt`.
+- **Relationships:** Must belong to the active company. Its nested role-system records must all carry this role’s ID. Phase 1 supports only one role, canonically Home-Service Office Manager / Dispatcher.
+- **Lifecycle:** Setup prepares a draft and activates it only after the complete role definition passes domain validation; later retirement is not implemented.
+- **Provenance:** Owner-entered role metadata and composition are not automatically employee-visible policy. Any later use as published guidance must pass the source-backed knowledge approval boundary.
 
 ### User
 
@@ -45,26 +59,28 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 
 ## Evidence and approved knowledge
 
-### SourceDocument
+### SourceDocument (future)
 
 - **Purpose:** Represents supplied source material, such as an owner-authored note, interview record, manual, or policy.
-- **Important fields:** `id`, scope, `title`, `mediaType`, content locator/integrity hash, `status`; lifecycle is `registered -> available -> superseded|withdrawn`.
-- **Relationships:** Contains source references and supports claims or knowledge revisions; content storage is not chosen in Phase 0.
+- **Important fields:** `id`, scope, `title`, `mediaType`, content locator/integrity hash, `status`; planned lifecycle is `registered -> available -> superseded|withdrawn`.
+- **Relationships:** Contains source references and supports claims or knowledge revisions; content storage remains unchosen.
 - **Provenance:** Records origin, supplier, capture time, integrity metadata, and supersession chain; withdrawal never deletes historical references.
 
-### SourceReference
+### SourceReference (Phase 1 metadata only)
 
-- **Purpose:** Locates the exact passage, page, timestamp, or structured fragment used as evidence.
-- **Important fields:** `id`, `sourceDocumentId`, stable locator, excerpt/hash, captured revision; it is immutable.
-- **Relationships:** Supports claims, procedures, rules, boundaries, proposals, answers, and scenarios.
-- **Provenance:** Is the atomic provenance record; it must remain resolvable to the cited document revision even after supersession.
+- **Purpose:** Records owner-entered metadata locating the evidence for a claim without uploading or storing source content.
+- **Important fields:** `id`, `sourceTitle`, constrained `sourceType`, `sourceLocator`, optional `excerpt`, `recordedAt`.
+- **Relationships:** Claim source-reference IDs must resolve to repository records. Later entities may cite the same atomic evidence record.
+- **Lifecycle:** Immutable after creation in Phase 1; correcting metadata requires a new reference.
+- **Provenance:** The locator and optional excerpt are retained with approved claim versions. RelayOS does not fetch, authenticate, hash, or independently verify the referenced source in this phase.
 
-### KnowledgeClaim
+### KnowledgeClaim (Phase 1)
 
-- **Purpose:** Captures one testable operational assertion extracted or authored from source material.
-- **Important fields:** `statement`, `origin`, `confidence`, `evidenceCondition`, revision, review state; lifecycle is `pending_review -> approved|rejected -> superseded`.
-- **Relationships:** Cites source references; can support procedures, rules, boundaries, gaps, and proposals.
-- **Provenance:** Requires at least one source reference to be approved; conflicts link all competing claims/references and open a gap.
+- **Purpose:** Captures one scoped operational assertion for deterministic owner review.
+- **Important fields:** `id`, `companyId`, `roleId`, `statement`, `category`, `provenance`, `lifecycleStatus`, `sourceReferenceIds`, `createdAt`, `updatedAt`, `version`, and optional `supersedesClaimId`.
+- **Relationships:** Must match the active company and role, and every cited source-reference ID must resolve. A revision points to the approved version it revises.
+- **Lifecycle:** Uses the seven explicit statuses listed under shared concepts. Only an explicit domain operation may approve, reject, revise, or supersede; approved content cannot be edited in place.
+- **Provenance:** Approval requires at least one valid source reference and an explicit `approve` decision for the exact claim version. Missing/conflicting classifications remain visible to the owner but never to the employee selector.
 
 ### Procedure
 
@@ -87,19 +103,21 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 - **Relationships:** Used by procedures, answers, scenarios, and escalations; may be constrained by authority boundaries.
 - **Provenance:** Approved rules require source references, supporting claims, and approval decisions; inferred conditions remain unapproved.
 
-### AuthorityBoundary
+### AuthorityBoundary (Phase 1 role definition)
 
-- **Purpose:** States what the employee may decide or do without owner authorization.
-- **Important fields:** action category, allowed/forbidden scope, monetary or risk limits, exceptions, revision, review state.
-- **Relationships:** Constrains procedures, decision rules, answers, responsibilities, and training scenarios.
-- **Provenance:** Approved boundaries require explicit source evidence and owner approval; ambiguity always escalates.
+- **Purpose:** States what the employee may decide or do and where owner involvement begins.
+- **Important fields:** `id`, `roleId`, `subject`, constrained `permissionLevel`, `limitOrConstraint`, `escalationDestination`, and optional `notes`. Permission is `may-decide`, `may-act-within-limit`, `must-request-approval`, `must-escalate`, or `prohibited`.
+- **Relationships:** Must belong to the active role; later procedures, answers, responsibilities, and training scenarios may be constrained by it.
+- **Lifecycle:** Created and edited during the Phase 1 role setup session; publishing versioned boundaries is future work.
+- **Provenance:** Phase 1 treats it as explicitly owner-entered role context, not approved employee-visible knowledge. Ambiguous guidance still cannot bypass claim review or escalation rules.
 
-### EscalationRule
+### EscalationRule (Phase 1 role definition)
 
 - **Purpose:** Defines when, why, and to whom work must be escalated.
-- **Important fields:** trigger, urgency, destination, required context, revision, review state.
-- **Relationships:** Evaluated for questions, procedure steps, authority boundaries, and scenarios; creates escalations.
-- **Provenance:** Approved rules cite source evidence and approval decisions; defaults may be safety fallbacks but cannot claim to be company policy.
+- **Important fields:** `id`, `roleId`, `trigger`, `destination`, constrained `urgency`, `requiredContext`, `expectedResponse`.
+- **Relationships:** Must belong to the active role. Future questions, procedure steps, authority boundaries, and scenarios may evaluate it; Phase 1 does not create an `Escalation`.
+- **Lifecycle:** Created and edited during the Phase 1 role setup session; published rule revisions are future work.
+- **Provenance:** Phase 1 records an explicit owner-authored rule definition, not source-backed employee-visible knowledge. A later published rule must retain sources and approval decisions.
 
 ## Operational loop
 
@@ -138,12 +156,13 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 - **Relationships:** May address gaps and create a new knowledge revision after an approval decision.
 - **Provenance:** Requires linked source references or an explicit missing-evidence flag; preserves generated/inferred origin after review. Approval does not mutate it into an employee-visible item.
 
-### ApprovalDecision
+### ApprovalDecision (Phase 1)
 
-- **Purpose:** Records an owner’s decision about a specific immutable revision or proposal.
-- **Important fields:** target ID/revision, decision (`approve`, `reject`, `request_changes`), rationale, owner user, timestamp; immutable after append.
-- **Relationships:** Belongs to the target’s approval history; later corrections append a new decision and normally a new target revision.
-- **Provenance:** Is itself the approval provenance; it links the evidence snapshot reviewed and cannot be edited or deleted.
+- **Purpose:** Records an owner-labeled decision about one exact immutable claim version.
+- **Important fields:** `id`, `claimId`, decision (`approve` or `reject`), `actorLabel`, `reason`, `decidedAt`, `claimVersion`.
+- **Relationships:** Belongs to the target claim’s complete decision history and records the version reviewed.
+- **Lifecycle:** Append-only. Phase 1 exposes no update or delete operation; a later correction requires another decision against an eligible target/version or a new claim revision.
+- **Provenance:** Is itself approval provenance. Approval is invalid without this separate record and at least one source reference.
 
 ## Role transfer and measurement
 
@@ -161,12 +180,13 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 - **Relationships:** Belongs to a scenario and user; may reveal a gap and contribute a visible metric component.
 - **Provenance:** Retains the exact scenario/rubric revision and deterministic evaluation inputs; model commentary cannot set a score.
 
-### Responsibility
+### Responsibility (Phase 1 role definition)
 
 - **Purpose:** Defines one accountable outcome within the transferred role.
-- **Important fields:** name, outcome, frequency/trigger, acceptance criteria, revision, review state; lifecycle is `draft -> approved|rejected -> retired`.
-- **Relationships:** Groups procedures, rules, boundaries, scenarios, events, and independence components.
-- **Provenance:** Approved responsibilities cite source references and approval history; inferred responsibilities remain candidates.
+- **Important fields:** `id`, `roleId`, `title`, `expectedOutcome`, `frequency`, `completionEvidence`, and active status.
+- **Relationships:** Must belong to the active role; later it may group procedures, rules, scenarios, events, and metric components.
+- **Lifecycle:** Created, edited, or removed before Phase 1 setup completion; active status distinguishes current role responsibilities. Versioned publication/retirement is future work.
+- **Provenance:** Phase 1 records explicit owner input as role-definition context. It is not eligible as employee knowledge unless represented by a separately source-backed approved knowledge item.
 
 ### IndependenceMetric
 
@@ -184,6 +204,8 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 
 ## Required visibility predicate
 
-An item may support an employee-visible answer only when its exact revision is approved, its source references and approval history are present, it matches company and role scope, it is not superseded or rejected, and no evidence, sensitivity, confidence, authority, or escalation rule requires escalation. All conditions are required; failure is closed, not permissive.
+In Phase 1, a claim may appear on the employee route only when its exact version is `approved`, it matches the active company and role, every cited source reference resolves, its explicit approval decision is present, and no successfully approved revision has superseded it. `extracted`, `proposed`, `rejected`, `missing-information`, `conflicting-information`, and `superseded` claims are always excluded.
+
+A future answer may use only claims that pass this selector plus the not-yet-implemented sensitivity, confidence, authority, and escalation gates. All conditions fail closed. Phase 1 demonstrates retrieval eligibility only; it does not accept questions or generate answers.
 
 See [Architecture](../../ARCHITECTURE.md), [AI boundaries](AI_BOUNDARIES.md), and [data flow](DATA_FLOW.md).

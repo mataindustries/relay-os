@@ -1,15 +1,37 @@
 # RelayOS user journeys
 
-These are target V1 journeys unless explicitly labeled Phase 0. They define outcomes and safety gates, not permission to implement later-phase features.
+These are target V1 journeys unless explicitly labeled Phase 1. They define outcomes and safety gates, not permission to implement later-phase features.
 
-## Phase 0: understand the foundation
+## Phase 1: owner establishes the role system
 
-1. A visitor opens RelayOS at a direct or in-app route on mobile or desktop.
-2. The home page explains the product promise, approved-knowledge principle, current phase, and future operating loop.
-3. Feature routes state what a later phase will provide without fake data, metrics, dashboards, or action controls.
-4. The architecture view explains why generation cannot become policy without owner approval.
+1. The owner is told that Phase 1 records last only for the current page session.
+2. The owner defines the company and its single Home-Service Office Manager / Dispatcher role.
+3. The owner adds responsibilities, authority boundaries, and escalation rules, correcting inline validation errors as needed.
+4. The owner reviews the complete role definition before activating it.
+5. RelayOS rejects completion when company/role ownership or required role-system information is invalid.
 
-## Future: owner establishes the role system
+The owner may instead load the fixed fictional Summit Comfort Heating & Air record. Loading it repeatedly in one session produces the same single record set rather than duplicates.
+
+## Phase 1: owner reviews manually entered knowledge
+
+1. The owner manually records source title, type, locator, optional excerpt, and capture time; no content is uploaded.
+2. The owner creates a scoped knowledge claim with explicit provenance and lifecycle state.
+3. The owner inspects the source metadata and records an approval or rejection reason.
+4. Approval succeeds only for a source-backed claim with an explicit decision and appends that immutable decision to history.
+5. Revising approved knowledge creates a new claim version; only successful approval of that revision supersedes the previous approved version.
+
+**Safety gate:** no claim can become employee-visible without a valid source, an explicit approval decision, and a current nonsuperseded approved version.
+
+## Phase 1: employee inspects eligible knowledge
+
+1. The employee route shows the active role identity.
+2. It requests knowledge through the approved employee-visible selector.
+3. The selector returns only approved, current, nonsuperseded claims in the active company and role scope.
+4. If none qualify, the route explains that no approved knowledge is available.
+
+There is no question box, chat, generated answer, training, or score in this phase. Proposed, extracted, rejected, missing-information, conflicting-information, and superseded claims never enter this view.
+
+## Future: source-assisted role-system development
 
 1. The owner defines the company and the Home-Service Office Manager / Dispatcher role.
 2. The owner records responsibilities, authority boundaries, escalation rules, and source material.

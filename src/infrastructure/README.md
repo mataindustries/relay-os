@@ -1,3 +1,9 @@
 # Infrastructure boundary
 
-Adapters for external systems will live here when a later execution plan requires them. Browser code must never contain API secrets, and Phase 0 adds no network, storage, model, or authentication adapter.
+Phase 1 provides only an in-memory implementation of the domain repository
+interfaces. It preserves the domain's write boundary, returns defensive copies,
+and has no browser, network, authentication, model, or durable-storage
+dependency. A reload intentionally discards every record.
+
+Future external adapters belong here only when an execution plan authorizes
+them. Browser code must never contain API secrets.

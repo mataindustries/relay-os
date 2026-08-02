@@ -1,0 +1,43 @@
+export type DomainErrorCode =
+  | 'validation-error'
+  | 'already-initialized'
+  | 'company-not-found'
+  | 'role-not-found'
+  | 'relationship-mismatch'
+  | 'not-found'
+  | 'invalid-transition'
+  | 'missing-source'
+  | 'source-not-found'
+  | 'approval-decision-required'
+  | 'immutable-approved-claim'
+  | 'revision-conflict'
+  | 'duplicate-record';
+
+export class DomainError extends Error {
+  readonly code: DomainErrorCode;
+  readonly field?: string;
+
+  constructor(code: DomainErrorCode, message: string, field?: string) {
+    super(message);
+    this.name = 'DomainError';
+    this.code = code;
+    if (field !== undefined) {
+      this.field = field;
+    }
+  }
+}
+
+export type DomainResult<T> =
+  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: DomainError };
+
+export function domainSuccess<T>(value: T): DomainResult<T> {
+  return { ok: true, value };
+}
+
+export function domainFailure<T = never>(
+  code: DomainErrorCode,
+  message: string,
+  field?: string,
+): DomainResult<T> {
+  return { ok: false, error: new DomainError(code, message, field) };
+}

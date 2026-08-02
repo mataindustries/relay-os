@@ -1,8 +1,14 @@
 import { NavLink, Outlet, Route, Routes } from 'react-router-dom';
 
+import type { PhaseOneService } from '../domain';
+import { EmployeePage } from '../features/employee';
+import { OwnerPage } from '../features/owner';
+import { ReviewPage } from '../features/review';
+import { SetupRoute } from '../features/setup';
 import { FuturePhasePage } from './FuturePhasePage';
 import { HomePage } from './HomePage';
 import { NotFoundPage } from './NotFoundPage';
+import { RelaySessionProvider } from './RelaySessionContext';
 
 const navigation = [
   { to: '/', label: 'Home' },
@@ -12,45 +18,6 @@ const navigation = [
   { to: '/review', label: 'Review' },
   { to: '/training', label: 'Training' },
   { to: '/settings', label: 'Settings' },
-] as const;
-
-const futureRoutes = [
-  {
-    path: '/setup',
-    title: 'Setup',
-    description:
-      'Company and role setup belongs to a later phase. Phase 0 does not collect or save setup data.',
-  },
-  {
-    path: '/owner',
-    title: 'Owner workspace',
-    description:
-      'The owner workspace belongs to a later phase. No source review or policy approval workflow is active yet.',
-  },
-  {
-    path: '/employee',
-    title: 'Employee workspace',
-    description:
-      'Employee question answering belongs to a later phase. Phase 0 does not generate operational guidance.',
-  },
-  {
-    path: '/review',
-    title: 'Knowledge review',
-    description:
-      'The proposal and approval queue belongs to a later phase. Nothing can be reviewed or published in Phase 0.',
-  },
-  {
-    path: '/training',
-    title: 'Training',
-    description:
-      'Employee training and scenario assessment belong to a later phase. No training activity is available yet.',
-  },
-  {
-    path: '/settings',
-    title: 'Settings',
-    description:
-      'Company configuration belongs to a later phase. Phase 0 has no editable application settings.',
-  },
 ] as const;
 
 function AppShell() {
@@ -82,26 +49,53 @@ function AppShell() {
         <Outlet />
       </main>
       <footer className="site-footer">
-        <p>RelayOS · Phase 0 foundation</p>
+        <p>RelayOS · Phase 1 company and role engine · session-only</p>
       </footer>
     </div>
   );
 }
 
-export function App() {
+function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
-        {futureRoutes.map(({ path, title, description }) => (
-          <Route
-            key={path}
-            path={path}
-            element={<FuturePhasePage title={title} description={description} />}
-          />
-        ))}
+        <Route path="/setup" element={<SetupRoute />} />
+        <Route path="/owner" element={<OwnerPage />} />
+        <Route path="/employee" element={<EmployeePage />} />
+        <Route path="/review" element={<ReviewPage />} />
+        <Route
+          path="/training"
+          element={
+            <FuturePhasePage
+              title="Training"
+              description="Training scenarios and assessment remain outside Phase 1. No training activity or scoring is available."
+            />
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <FuturePhasePage
+              title="Settings"
+              description="Durable settings, identity, and production configuration remain outside Phase 1."
+            />
+          }
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
+  );
+}
+
+export interface AppProps {
+  readonly service?: PhaseOneService | undefined;
+}
+
+export function App({ service }: AppProps) {
+  return (
+    <RelaySessionProvider service={service}>
+      <AppRoutes />
+    </RelaySessionProvider>
   );
 }

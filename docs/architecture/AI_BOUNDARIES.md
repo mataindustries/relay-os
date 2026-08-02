@@ -2,7 +2,7 @@
 
 ## Current state
 
-Phase 0 makes no model calls, installs no AI SDK, and has no prompt, ingestion, retrieval, or generation pipeline. Route copy and deterministic domain tests are not simulations of production AI. Any model behavior below is a constraint for a later approved execution plan.
+Phase 1 makes no model calls, installs no AI SDK, and has no prompt, ingestion, semantic retrieval, or generation pipeline. Manually entered proposed claims and fixed fictional demo records exercise review states; they are not AI output or simulations of production AI. Any model behavior below is a constraint for a later approved execution plan.
 
 ## Future boundary
 
@@ -41,11 +41,15 @@ If any check fails, the result is withheld and RelayOS creates an escalation and
 
 ## Review and publication
 
-Generated candidates enter `pending_review`. An owner sees the proposed change, generation label, sources, conflicts, and missing evidence, then appends `approve`, `reject`, or `request_changes`. Approval creates or publishes a distinct immutable knowledge revision; it does not erase the candidate’s generated origin. Rejections remain in history and outside employee retrieval.
+Future generated candidates must enter an unapproved lifecycle state. An owner sees the proposed change, generation label, sources, conflicts, and missing evidence, then records an explicit decision. Approval creates or publishes a distinct immutable knowledge revision; it does not erase the candidate’s generated origin. Rejections remain in history and outside employee retrieval.
+
+Phase 1 already establishes the deterministic subset of that boundary: only a manually created `proposed` claim can be approved; source provenance and an explicit approval decision are mandatory; approved claims are immutable; revisions create new versions; and rejection or unresolved states never become employee-visible. This behavior contains no model-specific branch.
 
 ## Deterministic demonstration mode
 
-RelayOS must retain a no-API path with fixed source fixtures, seeded retrieval results, deterministic answer/escalation outcomes, and explicit generated labels. Demonstration mode must exercise the same domain visibility rules as a future production adapter and must not pretend to be live model output.
+Phase 1 includes a fixed fictional HVAC company, role, manual source-reference metadata, and claims in approved, proposed, rejected, and conflicting states. Repeated loading is idempotent, and the employee view uses the same approved-knowledge selector as owner-entered records. It performs no network or model request and never labels its fixture text as live or generated output.
+
+Later demonstration phases may add seeded retrieval, answer, or escalation outcomes only when an execution plan authorizes those features; they must continue using the production domain gates.
 
 ## Verification expectations for later phases
 

@@ -4,7 +4,7 @@
 
 The planned V1 transfers one operational role for one company: **Home-Service Office Manager / Dispatcher**. It builds a reviewed body of role knowledge, uses that knowledge to support an employee, and returns unresolved work to the owner as explicit escalations and improvement proposals.
 
-“Planned V1” describes the product boundary, not the current implementation. Phase 0 provides only a static application shell, an initial domain invariant, tests, CI, and documentation.
+“Planned V1” describes the product boundary, not the current implementation. Phase 1 implements only the company-and-role definition and deterministic knowledge-review slice described below.
 
 ## Planned V1 capabilities
 
@@ -19,7 +19,7 @@ The planned V1 transfers one operational role for one company: **Home-Service Of
 - Derive responsibility-level and role-level independence metrics from visible, deterministic components.
 - Provide a deterministic no-API demonstration path for the complete supported loop.
 
-The exact sequencing and storage or identity technology require later execution plans. Nothing in this list authorizes implementation during Phase 0.
+The exact sequencing and storage or identity technology require later execution plans. Nothing in this list authorizes implementation beyond the active plan.
 
 ## Explicitly outside V1
 
@@ -31,8 +31,18 @@ The exact sequencing and storage or identity technology require later execution 
 - Opaque AI-generated independence scores or employee surveillance metrics
 - Provider-specific browser integrations or browser-held API secrets
 
-## Phase 0 boundary
+## Current Phase 1 boundary
 
-Phase 0 includes the routes `/`, `/setup`, `/owner`, `/employee`, `/review`, `/training`, and `/settings` only as deliberate informational placeholders. It excludes generation, AI chat, document uploads, authentication, persistence, employee training behavior, dashboards, scoring, production model calls, and Cloudflare Workers, D1, R2, or KV.
+Phase 1 provides:
 
-See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [active plan](../exec-plans/phase-0-foundation.md).
+- one company and one Home-Service Office Manager / Dispatcher role in current-page-session memory;
+- a five-step setup for company details, role details, responsibilities, authority boundaries, escalation rules, and activation review;
+- manually entered `SourceReference` metadata and deterministic `KnowledgeClaim` lifecycle decisions;
+- explicit source-backed approval or rejection, append-only decision history, immutable approved versions, and revision/supersession behavior;
+- owner views of actual current records and status-derived groups/counts;
+- an employee route containing only current approved knowledge returned by the domain selector; and
+- a fixed, visibly fictional, idempotent HVAC demonstration record.
+
+Phase 1 does not provide AI/model behavior, chat, employee questions or answers, source uploads or ingestion, authentication, durable or browser persistence, Cloudflare data services, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure. `/training` and `/settings` remain informational placeholders.
+
+See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [active plan](../exec-plans/phase-1-company-role-engine.md).

@@ -4,17 +4,30 @@ import { describe, expect, it } from 'vitest';
 
 import { App } from './App';
 
-const routes = [
-  ['/setup', 'Setup'],
-  ['/owner', 'Owner workspace'],
-  ['/employee', 'Employee workspace'],
-  ['/review', 'Knowledge review'],
+const functionalRoutes = [
+  ['/setup', 'Define the role being transferred'],
+  ['/owner', 'No role is active yet'],
+  ['/employee', 'No active role knowledge'],
+  ['/review', 'No active role to review'],
+] as const;
+
+const laterPhaseRoutes = [
   ['/training', 'Training'],
   ['/settings', 'Settings'],
 ] as const;
 
 describe('application routes', () => {
-  it.each(routes)('renders %s as an honest later-phase placeholder', (path, heading) => {
+  it.each(functionalRoutes)('renders the functional Phase 1 route %s', (path, heading) => {
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+  });
+
+  it.each(laterPhaseRoutes)('keeps %s as an honest later-phase placeholder', (path, heading) => {
     render(
       <MemoryRouter initialEntries={[path]}>
         <App />

@@ -6,9 +6,9 @@ RelayOS helps a business owner transfer one operational role to an employee as a
 
 ## Current scope
 
-Phase 0 is foundation only: a strict TypeScript React/Vite shell, route placeholders, one executable approved-knowledge boundary, tests, CI, and durable documentation. It is a Cloudflare Pages-compatible static SPA.
+Phase 1 is the active scope: a session-only engine for one company and its single Home-Service Office Manager / Dispatcher role. It supports role setup, responsibilities, authority boundaries, escalation rules, manual source metadata, deterministic claim review/revision, and an employee-visible approved-knowledge view. Data lives only in memory for the current page session.
 
-Before changing code, read [the execution-plan guide](docs/exec-plans/README.md) and the plan relevant to the change. The completed [Phase 0 foundation](docs/exec-plans/phase-0-foundation.md) records the current baseline; future implementation requires a new approved plan. Do not implement a later phase early, even if a future entity or flow is documented.
+Before changing code, read [the execution-plan guide](docs/exec-plans/README.md) and the plan relevant to the change. [Phase 1: Company and Role Engine](docs/exec-plans/phase-1-company-role-engine.md) is the active plan; the completed [Phase 0 foundation](docs/exec-plans/phase-0-foundation.md) records the baseline. Do not implement a later phase early, even if a future entity or flow is documented.
 
 ## Enforceable invariants
 
@@ -29,8 +29,8 @@ See [Architecture](ARCHITECTURE.md) for the normative rules and enforcement poin
 
 - `src/app/` — application composition, routes, and shell
 - `src/domain/` — framework-free domain rules and types
-- `src/features/` — feature-owned UI; Phase 0 contains placeholders only
-- `src/infrastructure/` — external adapters when a later plan authorizes them
+- `src/features/` — feature-owned setup, review, owner, and employee UI
+- `src/infrastructure/` — Phase 1 in-memory repository adapter; later external adapters require a plan
 - `src/shared/` — small cross-feature UI and utilities
 - `src/demo/` — deterministic, no-API demonstration data or adapters
 - `src/test/` — shared test setup and helpers
@@ -70,3 +70,4 @@ Use npm and commit `package-lock.json`. Prefer the complete `npm run check` befo
 - [Data flow](docs/architecture/DATA_FLOW.md)
 - [Security](docs/architecture/SECURITY.md)
 - [Foundation decision](docs/decisions/0001-foundation.md)
+- [Phase 1 engine decision](docs/decisions/0002-company-role-engine.md)

@@ -1,19 +1,51 @@
 # RelayOS data flow
 
-This document separates the Phase 0 implementation from planned V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); no persistence or model pipeline exists yet.
+This document separates the Phase 1 implementation from planned V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); no persistence, ingestion, employee-question, or model pipeline exists yet.
 
-## Phase 0 flow
+## Phase 1 session boundary
 
 ```text
 browser request -> Cloudflare Pages static asset / SPA fallback
-                -> React Router -> informational route
+                -> React Router -> Phase 1 route
 
-approved-status test input -> domain visibility primitive -> allow or deny
+one React context
+  -> one in-memory repository for the page session
+  -> domain service validates every scoped write and lifecycle operation
+  -> defensive repository reads
 ```
 
-There is no company data, upload, API, server, identity, model call, or durable event stream in Phase 0.
+In-app navigation retains the same repository instance. Reloading or closing the page discards every record. There is no browser storage, external request, API, server, identity, model call, source upload, or durable event stream.
 
-## Future source-to-knowledge flow
+## Phase 1 company-and-role flow
+
+```text
+setup draft
+  -> validate company fields and create the only Company
+  -> validate Role.companyId against that Company
+  -> validate Responsibility / AuthorityBoundary / EscalationRule role IDs
+  -> review complete role system
+  -> activate the one Role
+```
+
+The application UI calls domain/repository operations instead of publishing raw array mutations. Invalid ownership, missing required content, or invalid constrained values produce typed domain errors and cannot yield setup completion.
+
+## Phase 1 manual knowledge flow
+
+```text
+manual SourceReference metadata
+  -> scoped KnowledgeClaim in an unapproved lifecycle state
+  -> owner review
+  -> append explicit ApprovalDecision
+  -> approved immutable version OR retained rejected version
+  -> approved revision atomically supersedes its prior approved version
+  -> employee selector returns approved + current + nonsuperseded only
+```
+
+The selector also verifies active company/role scope, resolvable sources, and decision provenance. Missing, conflicting, extracted, proposed, rejected, and superseded records remain owner-visible where useful but employee-invisible. Phase 1 stops at eligible knowledge display; it does not accept a question or create an answer.
+
+The fixed Summit Comfort Heating & Air fixture passes through the same repository and domain policies. Its stable IDs make repeated loading in one session idempotent.
+
+## Future source-ingestion flow
 
 ```text
 SourceDocument
@@ -27,7 +59,7 @@ SourceDocument
 
 Extraction and generation never skip review. Each transition preserves scope, origin, source references, revision IDs, and activity events. Rejected revisions remain traceable and unavailable to employee retrieval. Missing evidence creates a gap; competing evidence retains both claims/references and creates a conflict gap.
 
-## Future employee question flow
+## Future employee question flow (not Phase 1)
 
 1. Store the `EmployeeQuestion` in company and role scope.
 2. Retrieve candidate knowledge with a hard approved/current/scope filter.
@@ -38,7 +70,7 @@ Extraction and generation never skip review. Each transition preserves scope, or
 
 Retrieval is fail-closed: filtering after generation is insufficient because unapproved material must not enter the answer context.
 
-## Future gap-to-improvement flow
+## Future gap-to-improvement flow (not Phase 1)
 
 ```text
 Question / Escalation / ScenarioAttempt
@@ -52,7 +84,7 @@ Question / Escalation / ScenarioAttempt
 
 Resolving or closing an escalation does not approve knowledge. Approving a proposal does not mutate its provenance; publication produces or activates a distinct knowledge revision after all source and approval requirements pass.
 
-## Future training and measurement flow
+## Future training and measurement flow (not Phase 1)
 
 Only approved knowledge can support an employee-visible `TrainingScenario`. A `ScenarioAttempt` retains the exact scenario and rubric revision. Deterministic evaluation components may feed an `IndependenceMetric` together with approved responsibility coverage and appropriate-escalation events. Each metric snapshot stores its formula version and linked inputs; no model produces the score.
 

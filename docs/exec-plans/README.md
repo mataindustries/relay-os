@@ -5,8 +5,9 @@ Execution plans are living implementation records. Before changing code, read th
 ## Current baseline
 
 - [Phase 0: Repository foundation](phase-0-foundation.md) — complete; foundation only
+- [Phase 1: Company and Role Engine](phase-1-company-role-engine.md) — active; session-only vertical slice
 
-Do not begin Phase 1 without a separately reviewed execution plan. Completion of the foundation does not authorize later-phase implementation.
+Phase 1 is the only active implementation plan. Do not begin Phase 2 or infer permission for AI, persistence, authentication, uploads, employee questions, training, or scoring from future product documentation.
 
 ## Required contents
 
