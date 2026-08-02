@@ -1,14 +1,14 @@
 # RelayOS architecture
 
-RelayOS is a static React application with a deterministic Phase 1 company-and-role engine. It has no backend, durable or browser persistence, identity, document ingestion, employee question answering, or model integration. Future architecture in this document remains constraint, not implementation permission.
+RelayOS is a static React application with a deterministic Phase 2 source-intake and gap-interview engine layered on the completed Phase 1 company-and-role lifecycle. It has no backend, durable or browser persistence, identity, file upload or autonomous ingestion, employee question answering, or model integration. Future architecture in this document remains constraint, not implementation permission.
 
 ## Current system
 
 Vite builds a client-side React/TypeScript SPA for Cloudflare Pages. React Router owns navigation, and a static fallback lets direct route requests reach the SPA. One application repository instance lives in React context for the current page session, so in-app navigation retains data and a reload clears it.
 
-Framework-free domain entities and a domain service own company/role relationships, role-composition validation, claim lifecycle transitions, approval, revision, supersession, and employee eligibility. Small repository interfaces separate those rules from the Phase 1 in-memory adapter. Application and feature code may use domain and shared code; domain code must not import React, browser APIs, or infrastructure. See [ADR 0002](docs/decisions/0002-company-role-engine.md).
+Framework-free domain entities and the existing domain service own company/role relationships, role-composition validation, source-document versioning, line anchors, explicit-topic coverage, gap/question/answer lifecycles, claim lifecycle transitions, approval, revision, supersession, and employee eligibility. Small repository interfaces separate those rules from the in-memory adapter. Application and feature code may use domain and shared code; domain code must not import React, browser APIs, or infrastructure. See [ADR 0002](docs/decisions/0002-company-role-engine.md) and [ADR 0003](docs/decisions/0003-deterministic-source-and-gap-engine.md).
 
-The current application can establish one company and one role, manually record role-system and source-reference metadata, review knowledge claims, and show current approved claims on the employee route. Fixed fictional HVAC demo data exercises the same domain and repository boundaries and loads idempotently. No source document content is uploaded or verified.
+The current application can establish one company and one role, paste plain-text source documents into session memory, activate immutable versions, derive exact line references, manually extract explicitly topic-assigned claims, reconcile coverage gaps, and retain deterministic owner-interview answers as unapproved source-backed claims. Those claims use the existing review operations, and only current approved claims reach the employee route. Fixed fictional HVAC demo data exercises the same domain and repository boundaries and loads idempotently. No source is uploaded, transmitted, semantically interpreted, authenticated, or independently verified.
 
 ## Planned operating loop
 
@@ -28,33 +28,34 @@ The proposal and the resulting approved knowledge are distinct records. Approval
 
 These rules are architectural acceptance criteria. Later storage, APIs, UI, and tests must enforce them at every write and read boundary.
 
-| #   | Rule                                                                                                                                   | Required enforcement                                                                                            |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 1   | Employee-visible answers may use only approved knowledge.                                                                              | Phase 1 domain selector filters exact current claim versions; a later server must enforce the same rule.        |
-| 2   | Generated or inferred content must remain visibly unapproved.                                                                          | Preserve provenance and lifecycle in domain records and UI; generation cannot set approval.                     |
-| 3   | Every approved knowledge item must retain its source and approval history.                                                             | Domain approval requires source references and an explicit decision; immutable versions retain both.            |
-| 4   | When evidence is absent, conflicting, sensitive, or below confidence thresholds, RelayOS must escalate instead of inventing an answer. | Phase 1 keeps missing/conflicting claims employee-invisible; future answer checks create an escalation and gap. |
-| 5   | Approval history is append-only.                                                                                                       | The Phase 1 domain service appends immutable decisions; revisions create new claim versions.                    |
-| 6   | Independence scores must be derived from visible components, not generated by a language model.                                        | A later phase must introduce a versioned deterministic formula with inspectable inputs and tests.               |
-| 7   | No API secret may exist in browser code.                                                                                               | Build/config review and secret scanning; browser receives only public configuration.                            |
-| 8   | Model providers must be accessed through a server-side `ModelGateway` abstraction in a later phase.                                    | No provider SDK or call in client/domain code; gateway boundary owns provider access.                           |
-| 9   | The application must support a deterministic no-API demonstration mode.                                                                | Fixed fictional fixtures use the same domain rules and load idempotently without network access.                |
-| 10  | The first version supports one company and one role well before supporting generalized multi-tenancy.                                  | The domain service rejects cross-company/role relationships and does not expose tenant administration.          |
+| #   | Rule                                                                                                                                   | Required enforcement                                                                                                          |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Employee-visible answers may use only approved knowledge.                                                                              | The unchanged approved-knowledge selector filters exact current claim versions; a later server must enforce the same rule.    |
+| 2   | Generated or inferred content must remain visibly unapproved.                                                                          | Phase 2 interview answers and manual extractions create proposals with retained provenance; neither path can approve.         |
+| 3   | Every approved knowledge item must retain its source and approval history.                                                             | Domain approval requires exact references and an explicit decision; immutable source/claim versions retain both.              |
+| 4   | When evidence is absent, conflicting, sensitive, or below confidence thresholds, RelayOS must escalate instead of inventing an answer. | Phase 2 records deterministic missing/incomplete/conflict/authority gaps; employee answering remains future work.             |
+| 5   | Approval history is append-only.                                                                                                       | The Phase 1 domain service appends immutable decisions; revisions create new claim versions.                                  |
+| 6   | Independence scores must be derived from visible components, not generated by a language model.                                        | A later phase must introduce a versioned deterministic formula with inspectable inputs and tests.                             |
+| 7   | No API secret may exist in browser code.                                                                                               | Build/config review and secret scanning; browser receives only public configuration.                                          |
+| 8   | Model providers must be accessed through a server-side `ModelGateway` abstraction in a later phase.                                    | No provider SDK or call in client/domain code; gateway boundary owns provider access.                                         |
+| 9   | The application must support a deterministic no-API demonstration mode.                                                                | Fixed source, anchor, coverage, gap, question, answer, claim, and decision fixtures load idempotently without network access. |
+| 10  | The first version supports one company and one role well before supporting generalized multi-tenancy.                                  | The domain service rejects cross-company/role relationships and does not expose tenant administration.                        |
 
 Rule 2 means generated answers may be shown only as grounded responses assembled exclusively from approved knowledge, with citations and an explicit generated/non-policy label. They are never silently promoted into reusable knowledge. Rule 4 takes precedence whenever grounding eligibility fails. More detail is in [AI boundaries](docs/architecture/AI_BOUNDARIES.md).
 
 ## Knowledge states and traceability
 
-- **Source material** is represented in Phase 1 only by manually entered immutable `SourceReference` metadata; `SourceDocument` ingestion is future work.
+- **Source material** is represented by immutable available `SourceDocument` versions held in session memory and by immutable `SourceReference` records. A reference may remain Phase 1 metadata-only or cite an exact historical document version and inclusive line range.
 - **Extracted claims** remain unavailable until an owner decision; extraction is not approval.
+- **Interview answers** retain the exact owner input and create `owner-interview` evidence plus an unapproved same-topic claim. Editing proposal wording does not rewrite the answer.
 - **Generated proposals** preserve their generated origin and referenced evidence.
 - **Owner-approved knowledge** is an immutable revision with sources and an append-only `ApprovalDecision` history.
 - **Rejected knowledge** is retained with its rejection decision and never retrieved as approved.
-- **Missing or conflicting information** remains explicitly classified and employee-invisible. Creating `KnowledgeGap` and `Escalation` records from employee questions is future work.
+- **Missing, incomplete, conflicting, or unclear-authority information** becomes a deterministic topic-scoped `KnowledgeGap` and employee-invisible question queue. Employee-question `Escalation` records remain future work.
 
 ## Hosting and later boundaries
 
-Phase 1 still deploys only static assets. Its in-memory records are a product demonstration, not protected or durable company storage. Cloudflare Workers, D1, R2, KV, authentication, and secrets are intentionally absent. Before introducing model calls or protected company information, a later plan must add a server trust boundary, authorization, durable audit/provenance storage, and the `ModelGateway` described in [security](docs/architecture/SECURITY.md).
+Phase 2 still deploys only static assets. Its in-memory pasted sources and records are a product demonstration, not protected or durable company storage. Cloudflare Workers, D1, R2, KV, authentication, and secrets are intentionally absent. Before introducing model calls or protected company information, a later plan must add a server trust boundary, authorization, durable audit/provenance storage, and the `ModelGateway` described in [security](docs/architecture/SECURITY.md).
 
 ## Key references
 
@@ -63,4 +64,5 @@ Phase 1 still deploys only static assets. Its in-memory records are a product de
 - [Data flow](docs/architecture/DATA_FLOW.md)
 - [Foundation ADR](docs/decisions/0001-foundation.md)
 - [Company and role engine ADR](docs/decisions/0002-company-role-engine.md)
+- [Deterministic source and gap engine ADR](docs/decisions/0003-deterministic-source-and-gap-engine.md)
 - [Execution plans](docs/exec-plans/README.md)

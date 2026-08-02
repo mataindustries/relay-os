@@ -1,12 +1,12 @@
 # RelayOS domain model
 
-This is the canonical domain vocabulary. It is not a database schema and does not authorize implementation beyond the active [execution plan](../exec-plans/README.md). Phase 1 implements the entities explicitly labeled below; the remaining entities describe later V1 boundaries. Exact types may evolve, but approval, provenance, versioning, and visibility semantics are architectural constraints.
+This is the canonical domain vocabulary. It is not a database schema and does not authorize implementation beyond the active [execution plan](../exec-plans/README.md). Phase 2 implements the entities explicitly labeled below while preserving the completed Phase 1 entities; the remaining entities describe later V1 boundaries. Exact types may evolve, but approval, provenance, versioning, and visibility semantics are architectural constraints.
 
 ## Shared concepts
 
-Every record has an immutable identifier and the company/role scope, timestamps, and version fields relevant to that record. Phase 1 operates with exactly one company and one Home-Service Office Manager / Dispatcher role, but it validates explicit IDs to prevent cross-scope relationships.
+Every record has an immutable identifier and the company/role scope, timestamps, and version fields relevant to that record. Phase 2 continues to operate with exactly one company and one Home-Service Office Manager / Dispatcher role, but it validates explicit IDs to prevent cross-scope relationships.
 
-Phase 1 `KnowledgeClaim.lifecycleStatus` is one of `extracted`, `proposed`, `approved`, `rejected`, `missing-information`, `conflicting-information`, or `superseded`. `provenance` records how the statement arose and never implies approval. Only the domain service may make lifecycle transitions; invalid transitions return a typed domain error. Approval requires source references plus a separately appended `ApprovalDecision`.
+`KnowledgeClaim.lifecycleStatus` remains one of `extracted`, `proposed`, `approved`, `rejected`, `missing-information`, `conflicting-information`, or `superseded`. Phase 2 adds an optional explicit operational-topic key and `owner-interview-derived` provenance without changing what approval means. `provenance` records how the statement arose and never implies approval. Only the domain service may make lifecycle transitions; invalid transitions return a typed domain error. Approval requires source references plus a separately appended `ApprovalDecision`.
 
 The permitted lifecycle graph is deliberately small:
 
@@ -22,13 +22,13 @@ Approved claims are immutable versions. A revision creates a new claim with an i
 
 The required distinctions are structural:
 
-- **Source material:** Phase 1 uses manually entered immutable `SourceReference` metadata. `SourceDocument` content and ingestion remain future work.
+- **Source material:** Phase 2 stores owner-pasted plain text in immutable available `SourceDocument` versions for the current session. `SourceReference` remains compatible with Phase 1 metadata and may anchor exact versioned lines.
 - **Extracted claims:** `KnowledgeClaim` with extracted origin and an unapproved initial state.
 - **Generated proposals:** `ImprovementProposal` with generation metadata and evidence links.
 - **Owner-approved knowledge:** an approved revision plus its sources and approval decisions.
 - **Rejected knowledge:** a retained rejected revision plus its rejection decision.
-- **Missing information:** `KnowledgeGap.reason = missing_evidence`.
-- **Conflicting information:** linked claims/references plus `KnowledgeGap.reason = conflicting_evidence`.
+- **Missing information:** `KnowledgeGap.reason = missing-evidence`.
+- **Conflicting information:** linked claims/references plus `KnowledgeGap.reason = conflicting-evidence`.
 
 Other mandatory escalation reasons include sensitive evidence, evidence below a configured confidence threshold, and action outside authority. A confidence value never bypasses an approval requirement.
 
@@ -59,25 +59,25 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 
 ## Evidence and approved knowledge
 
-### SourceDocument (future)
+### SourceDocument (Phase 2)
 
-- **Purpose:** Represents supplied source material, such as an owner-authored note, interview record, manual, or policy.
-- **Important fields:** `id`, scope, `title`, `mediaType`, content locator/integrity hash, `status`; planned lifecycle is `registered -> available -> superseded|withdrawn`.
-- **Relationships:** Contains source references and supports claims or knowledge revisions; content storage remains unchosen.
-- **Provenance:** Records origin, supplier, capture time, integrity metadata, and supersession chain; withdrawal never deletes historical references.
+- **Purpose:** Represents owner-pasted plain-text operational material such as a job description, SOP, policy, checklist, customer script, dispatch note, or owner note.
+- **Important fields:** `id`, company/role scope, `title`, constrained `sourceType`, `supplierLabel`, `captureMethod = manual-paste`, normalized `content`, numbered `lines`, `version`, `status`, timestamps, and optional `supersedesDocumentId`.
+- **Relationships:** Exact-version line anchors support claims. A draft may become available; correcting an available version creates a new draft version whose activation marks its predecessor superseded. Available and historical versions are immutable.
+- **Provenance:** Line endings are normalized and lines are one-based. No checksum, authentication, source verification, upload, or durable content store is claimed. Supersession or withdrawal never deletes historical evidence.
 
-### SourceReference (Phase 1 metadata only)
+### SourceReference (Phase 1 and Phase 2)
 
 - **Purpose:** Records owner-entered metadata locating the evidence for a claim without uploading or storing source content.
-- **Important fields:** `id`, `sourceTitle`, constrained `sourceType`, `sourceLocator`, optional `excerpt`, `recordedAt`.
-- **Relationships:** Claim source-reference IDs must resolve to repository records. Later entities may cite the same atomic evidence record.
-- **Lifecycle:** Immutable after creation in Phase 1; correcting metadata requires a new reference.
-- **Provenance:** The locator and optional excerpt are retained with approved claim versions. RelayOS does not fetch, authenticate, hash, or independently verify the referenced source in this phase.
+- **Important fields:** `id`, `sourceTitle`, constrained `sourceType`, `sourceLocator`, optional `excerpt`, `recordedAt`, and optional complete document anchor (`sourceDocumentId`, exact `sourceDocumentVersion`, inclusive `startLine`, `endLine`). New document/interview references also retain company/role scope.
+- **Relationships:** Claim source-reference IDs must resolve. A document anchor must resolve the exact historical version and valid lines; its excerpt and locator are derived rather than separately supplied. `owner-interview` references link exact answer provenance without being employee-visible by themselves.
+- **Lifecycle:** Immutable after creation. Correcting metadata or evidence requires a new reference; revising a document never rewrites prior anchors. Phase 1 metadata-only references remain valid.
+- **Provenance:** Locators and excerpts are retained with claim versions. RelayOS does not fetch, authenticate, hash, semantically interpret, or independently verify a source.
 
-### KnowledgeClaim (Phase 1)
+### KnowledgeClaim (Phase 1 and Phase 2)
 
 - **Purpose:** Captures one scoped operational assertion for deterministic owner review.
-- **Important fields:** `id`, `companyId`, `roleId`, `statement`, `category`, `provenance`, `lifecycleStatus`, `sourceReferenceIds`, `createdAt`, `updatedAt`, `version`, and optional `supersedesClaimId`.
+- **Important fields:** `id`, `companyId`, `roleId`, `statement`, `category`, `provenance`, `lifecycleStatus`, `sourceReferenceIds`, optional explicit `topicKey`, timestamps, `version`, and optional `supersedesClaimId`.
 - **Relationships:** Must match the active company and role, and every cited source-reference ID must resolve. A revision points to the approved version it revises.
 - **Lifecycle:** Uses the seven explicit statuses listed under shared concepts. Only an explicit domain operation may approve, reject, revise, or supersede; approved content cannot be edited in place.
 - **Provenance:** Approval requires at least one valid source reference and an explicit `approve` decision for the exact claim version. Missing/conflicting classifications remain visible to the owner but never to the employee selector.
@@ -142,12 +142,26 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 - **Relationships:** Links the triggering question, rules/boundaries checked, evidence inspected, gap, and any later proposal.
 - **Provenance:** Retains the exact evidence condition and source/knowledge references checked; a resolution is not knowledge approval.
 
-### KnowledgeGap
+### KnowledgeGap (Phase 2 topic coverage)
 
-- **Purpose:** Makes absent, conflicting, sensitive, low-confidence, or out-of-authority information actionable.
-- **Important fields:** reason, description, scope, impact, status; lifecycle is `open -> proposed -> resolved|dismissed`.
-- **Relationships:** Originates from questions, escalations, attempts, or source review and may lead to improvement proposals.
-- **Provenance:** Links triggering records and all available evidence; missing evidence is stated explicitly rather than backfilled with inference.
+- **Purpose:** Makes missing, incomplete, explicitly conflicting, or unclear-authority evidence in the canonical role-topic catalog actionable.
+- **Important fields:** `id`, company/role scope, `topicKey`, constrained `reason`, description, impact, risk tier, status, supporting source-reference IDs, related claim IDs, timestamps, and optional resolution/dismissal details. Lifecycle is `open -> question-ready -> answered -> proposal-created -> resolved`, with permitted reasoned dismissal paths.
+- **Relationships:** At most one active unresolved gap exists per scoped topic. Deterministic reconciliation creates or updates gaps from explicit claim/topic records; an approved current same-topic claim may resolve one. Rejection and dismissal never approve knowledge.
+- **Provenance:** Links explicit sources and claims. Missing evidence is stated rather than inferred; absence of an active gap is not a compliance or quality claim.
+
+### InterviewQuestion (Phase 2)
+
+- **Purpose:** Presents one reviewed deterministic question template for an unresolved topic gap.
+- **Important fields:** `id`, scope, `gapId`, `topicKey`, stable template key, prompt, rationale, what it unlocks, constrained answer type/options, numeric priority, status, and timestamps. Lifecycle is `queued -> active -> answered|skipped`, with withdrawal when its gap becomes terminal.
+- **Relationships:** Generated only for active unresolved gaps. Risk tier, catalog order, and template sequence determine stable priority; only one question is active. Explicit structured-value rules create reviewed follow-ups for discounts, after-hours, emergencies, refunds, and permits.
+- **Provenance:** Prompt text comes from the checked-in catalog, not a model or source interpretation. A skip retains a reason and does not resolve its gap.
+
+### InterviewAnswer (Phase 2)
+
+- **Purpose:** Retains the exact owner response and turns it into reviewable evidence without declaring policy.
+- **Important fields:** `id`, `questionId`, `gapId`, scope, actor label, exact answer, optional structured value, answer time, `sourceReferenceId`, `generatedClaimId`, and optional `correctsAnswerId`.
+- **Relationships:** Submission atomically appends an `owner-interview` reference and an `owner-interview-derived` same-topic proposed claim. A correction appends a new answer, source, and claim against the same question.
+- **Provenance:** The answer is immutable. Candidate wording may be edited through the claim operation, but the underlying answer and source excerpt remain unchanged. Only the normal `ApprovalDecision` operation can make the claim approved.
 
 ### ImprovementProposal
 
@@ -204,8 +218,8 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 
 ## Required visibility predicate
 
-In Phase 1, a claim may appear on the employee route only when its exact version is `approved`, it matches the active company and role, every cited source reference resolves, its explicit approval decision is present, and no successfully approved revision has superseded it. `extracted`, `proposed`, `rejected`, `missing-information`, `conflicting-information`, and `superseded` claims are always excluded.
+In Phase 2, the Phase 1 predicate is unchanged: a claim may appear on the employee route only when its exact version is `approved`, it matches the active company and role, every cited source reference resolves, its explicit approval decision is present, and no successfully approved revision has superseded it. `extracted`, `proposed`, `rejected`, `missing-information`, `conflicting-information`, and `superseded` claims are always excluded. Documents, gaps, interview questions, and raw answers are not employee records.
 
-A future answer may use only claims that pass this selector plus the not-yet-implemented sensitivity, confidence, authority, and escalation gates. All conditions fail closed. Phase 1 demonstrates retrieval eligibility only; it does not accept questions or generate answers.
+A future answer may use only claims that pass this selector plus the not-yet-implemented sensitivity, confidence, authority, and escalation gates. All conditions fail closed. Phase 2 still demonstrates retrieval eligibility only; it does not accept employee questions or generate answers.
 
 See [Architecture](../../ARCHITECTURE.md), [AI boundaries](AI_BOUNDARIES.md), and [data flow](DATA_FLOW.md).

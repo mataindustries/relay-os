@@ -5,9 +5,10 @@ Execution plans are living implementation records. Before changing code, read th
 ## Current baseline
 
 - [Phase 0: Repository foundation](phase-0-foundation.md) — complete; foundation only
-- [Phase 1: Company and Role Engine](phase-1-company-role-engine.md) — active; session-only vertical slice
+- [Phase 1: Company and Role Engine](phase-1-company-role-engine.md) — complete; session-only company, role, and approval vertical slice
+- [Phase 2: Source Intake and Knowledge Gap Interviewer](phase-2-source-intake-interviewer.md) — complete; session-only source and gap-interview vertical slice
 
-Phase 1 is the only active implementation plan. Do not begin Phase 2 or infer permission for AI, persistence, authentication, uploads, employee questions, training, or scoring from future product documentation.
+No later implementation plan is active. Do not begin Phase 3 or infer permission for AI, persistence, authentication, uploads, employee questions, training, or scoring from future product documentation.
 
 ## Required contents
 

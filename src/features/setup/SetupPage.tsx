@@ -349,7 +349,7 @@ export function SetupPage({
   return (
     <section className="setup-page" aria-labelledby="setup-page-title">
       <header className="setup-page-header">
-        <p className="phase-label">Phase 1 · Session-only setup</p>
+        <p className="phase-label">Phase 2 · Session-only role setup</p>
         <h1 id="setup-page-title">Define the role being transferred</h1>
         <p className="setup-intro">
           Record one company and one operational role, then review the full definition before
@@ -555,7 +555,7 @@ function RoleStep({ draft, errors, onChange }: RoleStepProps) {
   return (
     <fieldset className="setup-step">
       <legend>Operational role</legend>
-      <p>Phase 1 supports one role. Set it to active only when this definition is ready to use.</p>
+      <p>RelayOS supports one role. Set it to active only when this definition is ready to use.</p>
       <div className="setup-form-grid">
         <TextField
           id="setup-role-title"

@@ -7,9 +7,13 @@ import { InMemoryPhaseOneRepository } from './inMemoryPhaseOneRepository';
 const emptySnapshot = (): PhaseOneSnapshot => ({
   company: null,
   role: null,
+  sourceDocuments: [],
   sourceReferences: [],
   knowledgeClaims: [],
   approvalDecisions: [],
+  knowledgeGaps: [],
+  interviewQuestions: [],
+  interviewAnswers: [],
 });
 
 describe('InMemoryPhaseOneRepository', () => {
@@ -34,7 +38,7 @@ describe('InMemoryPhaseOneRepository', () => {
 
     const secondRead = repository.readSnapshot();
 
-    expect(secondRead.sourceReferences).toHaveLength(5);
+    expect(secondRead.sourceReferences).toHaveLength(12);
     expect(secondRead.company?.name).toBe('Summit Comfort Heating & Air');
     expect(secondRead.role?.responsibilities[0]?.title).toBe('Maintain the dispatch schedule');
   });

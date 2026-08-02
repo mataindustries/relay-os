@@ -4,7 +4,7 @@
 
 The planned V1 transfers one operational role for one company: **Home-Service Office Manager / Dispatcher**. It builds a reviewed body of role knowledge, uses that knowledge to support an employee, and returns unresolved work to the owner as explicit escalations and improvement proposals.
 
-“Planned V1” describes the product boundary, not the current implementation. Phase 1 implements only the company-and-role definition and deterministic knowledge-review slice described below.
+“Planned V1” describes the product boundary, not the current implementation. Phase 2 implements only the completed company/role/review foundation plus manual source intake and the deterministic owner-side gap interviewer described below.
 
 ## Planned V1 capabilities
 
@@ -31,7 +31,7 @@ The exact sequencing and storage or identity technology require later execution 
 - Opaque AI-generated independence scores or employee surveillance metrics
 - Provider-specific browser integrations or browser-held API secrets
 
-## Current Phase 1 boundary
+## Completed Phase 1 baseline
 
 Phase 1 provides:
 
@@ -43,6 +43,17 @@ Phase 1 provides:
 - an employee route containing only current approved knowledge returned by the domain selector; and
 - a fixed, visibly fictional, idempotent HVAC demonstration record.
 
-Phase 1 does not provide AI/model behavior, chat, employee questions or answers, source uploads or ingestion, authentication, durable or browser persistence, Cloudflare data services, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure. `/training` and `/settings` remain informational placeholders.
+## Current Phase 2 boundary
 
-See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [active plan](../exec-plans/phase-1-company-role-engine.md).
+Phase 2 adds:
+
+- owner-pasted plain-text `SourceDocument` drafts and immutable available/revision history in current-session memory;
+- stable one-based lines and exact derived `SourceReference` anchors while retaining Phase 1 metadata-only references;
+- manual source-backed claim extraction with explicit canonical operational-topic assignment;
+- a pure deterministic coverage map plus idempotently reconciled missing, incomplete, explicit-conflict, or unclear-authority gaps;
+- a risk-prioritized, one-active-question deterministic owner interviewer with typed follow-up rules; and
+- immutable interview answers that create `owner-interview` evidence and proposed claims, then use the existing decision and employee-selector boundaries.
+
+Phase 2 does not provide AI/model behavior, automatic document interpretation or extraction, semantic retrieval, chat, employee questions or answers, file uploads or parsing, authentication, durable or browser persistence, Cloudflare data services, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure. `/training` and `/settings` remain informational placeholders.
+
+See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [active plan](../exec-plans/phase-2-source-intake-interviewer.md).

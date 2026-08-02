@@ -132,9 +132,13 @@ const decision = (
 const snapshot = (overrides: Partial<PhaseOneSnapshot> = {}): PhaseOneSnapshot => ({
   company: company(),
   role: role(),
+  sourceDocuments: [],
   sourceReferences: [source()],
   knowledgeClaims: [],
   approvalDecisions: [],
+  knowledgeGaps: [],
+  interviewQuestions: [],
+  interviewAnswers: [],
   ...overrides,
 });
 

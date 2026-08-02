@@ -7,6 +7,8 @@ import { App } from './App';
 const functionalRoutes = [
   ['/setup', 'Define the role being transferred'],
   ['/owner', 'No role is active yet'],
+  ['/sources', 'No active role for source intake'],
+  ['/interview', 'No active role to interview'],
   ['/employee', 'No active role knowledge'],
   ['/review', 'No active role to review'],
 ] as const;
@@ -17,7 +19,7 @@ const laterPhaseRoutes = [
 ] as const;
 
 describe('application routes', () => {
-  it.each(functionalRoutes)('renders the functional Phase 1 route %s', (path, heading) => {
+  it.each(functionalRoutes)('renders the functional Phase 2 route %s', (path, heading) => {
     render(
       <MemoryRouter initialEntries={[path]}>
         <App />

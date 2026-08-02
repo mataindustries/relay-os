@@ -132,7 +132,7 @@ describe('critical Phase 1 application journeys', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Owner' }));
     expect(screen.getByText('3 responsibilities')).toBeInTheDocument();
-    expect(screen.getByText('4 knowledge claims')).toBeInTheDocument();
+    expect(screen.getByText('5 knowledge claims')).toBeInTheDocument();
   });
 
   it('records owner approval and rejection interactions with append-only reasons', () => {

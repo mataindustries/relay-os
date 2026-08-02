@@ -1,6 +1,7 @@
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
-import type { KnowledgeClaim } from '../../domain';
+import type { KnowledgeClaim, KnowledgeGap, TopicCoverageState } from '../../domain';
 import { useRelaySession } from '../../app/useRelaySession';
 
 const REVIEW_STATUSES = new Set(['extracted', 'proposed']);
@@ -53,14 +54,45 @@ function KnowledgeSection({
   );
 }
 
+type CoverageFilter = 'all' | 'critical' | Exclude<TopicCoverageState, 'dismissed'>;
+
+function GapDismissal({ gap }: { readonly gap: KnowledgeGap }) {
+  const { dismissKnowledgeGap } = useRelaySession();
+  const [reason, setReason] = useState('');
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  function dismiss(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const result = dismissKnowledgeGap(gap.id, reason);
+    setFeedback(result.ok ? 'Gap dismissed with the recorded reason.' : result.error.message);
+  }
+
+  return (
+    <details className="gap-dismissal">
+      <summary>Dismiss as not applicable</summary>
+      <form className="stacked-form" onSubmit={dismiss}>
+        <label>
+          Owner reason
+          <textarea rows={2} value={reason} onChange={(event) => setReason(event.target.value)} />
+        </label>
+        <button className="secondary-button" type="submit">
+          Dismiss with reason
+        </button>
+      </form>
+      {feedback ? <p role="status">{feedback}</p> : null}
+    </details>
+  );
+}
+
 export function OwnerPage() {
-  const { snapshot, isFictionalDemo } = useRelaySession();
+  const { snapshot, isFictionalDemo, coverageResult } = useRelaySession();
   const { company, role, knowledgeClaims } = snapshot;
+  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>('all');
 
   if (company === null || role === null) {
     return (
       <section className="workspace-page" aria-labelledby="owner-title">
-        <p className="phase-label">Phase 1 · Owner workspace</p>
+        <p className="phase-label">Phase 2 · Owner workspace</p>
         <h1 id="owner-title">No role is active yet</h1>
         <p>Complete the session-only setup or load the fictional HVAC demonstration first.</p>
         <Link className="text-link" to="/setup">
@@ -81,7 +113,7 @@ export function OwnerPage() {
   return (
     <div className="workspace-page">
       <header className="workspace-header">
-        <p className="phase-label">Phase 1 · Owner workspace</p>
+        <p className="phase-label">Phase 2 · Owner workspace</p>
         <h1>{company.name}</h1>
         <p className="workspace-lede">
           Current session records for the one supported company and operational role.
@@ -126,8 +158,128 @@ export function OwnerPage() {
           <span>{role.responsibilities.length} responsibilities</span>
           <span>{role.authorityBoundaries.length} authority boundaries</span>
           <span>{role.escalationRules.length} escalation rules</span>
+          <span>{snapshot.sourceDocuments.length} source versions</span>
           <span>{knowledgeClaims.length} knowledge claims</span>
+          <span>
+            {snapshot.knowledgeGaps.filter(({ status }) => status !== 'resolved').length} open or
+            historical gaps
+          </span>
         </div>
+      </section>
+
+      <section className="workspace-section coverage-section" aria-labelledby="coverage-title">
+        <div className="section-heading-row">
+          <div>
+            <h2 id="coverage-title">Operational knowledge coverage</h2>
+            <p>
+              Coverage means evidence is explicitly assigned and reviewed within RelayOS. It is not
+              legal compliance, a safety certification, or a guarantee of operational quality.
+            </p>
+          </div>
+          <label className="coverage-filter">
+            Filter coverage
+            <select
+              value={coverageFilter}
+              onChange={(event) => setCoverageFilter(event.target.value as CoverageFilter)}
+            >
+              <option value="all">All</option>
+              <option value="critical">Critical</option>
+              <option value="missing">Missing</option>
+              <option value="candidate">Candidate</option>
+              <option value="conflicting">Conflicting</option>
+              <option value="approved">Approved</option>
+            </select>
+          </label>
+        </div>
+        <div className="button-row">
+          <Link className="secondary-link" to="/sources">
+            Open Source Library
+          </Link>
+          <Link className="primary-link" to="/interview">
+            Start gap interview
+          </Link>
+        </div>
+
+        {!coverageResult.ok ? (
+          <p className="form-feedback error" role="alert">
+            Coverage failed closed: {coverageResult.error.message}
+          </p>
+        ) : (
+          <div className="coverage-grid">
+            {coverageResult.value
+              .filter(({ topic, state }) =>
+                coverageFilter === 'all'
+                  ? true
+                  : coverageFilter === 'critical'
+                    ? topic.riskTier === 'critical'
+                    : state === coverageFilter,
+              )
+              .map((entry) => (
+                <article className="coverage-card" key={entry.topic.key}>
+                  <div className="record-card-heading">
+                    <span className={`coverage-state coverage-${entry.state}`}>{entry.state}</span>
+                    <span className={`risk-badge risk-${entry.topic.riskTier}`}>
+                      {entry.topic.riskTier} risk
+                    </span>
+                  </div>
+                  <h3>{entry.topic.label}</h3>
+                  <p>{entry.topic.description}</p>
+                  {entry.approvedClaim ? (
+                    <div className="coverage-evidence">
+                      <h4>Current approved claim</h4>
+                      <p>{entry.approvedClaim.statement}</p>
+                    </div>
+                  ) : null}
+                  {entry.candidateClaims.length > 0 ? (
+                    <div className="coverage-evidence">
+                      <h4>Candidate claims</h4>
+                      <ul>
+                        {entry.candidateClaims.map((claim) => (
+                          <li key={claim.id}>{claim.statement}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {entry.conflictingClaims.length > 0 ? (
+                    <div className="coverage-conflict">
+                      <h4>Explicit conflict</h4>
+                      {entry.conflictingClaims.map((claim) => (
+                        <p key={claim.id}>{claim.statement}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {entry.gap ? (
+                    <div className="coverage-gap">
+                      <h4>
+                        {entry.gap.status === 'dismissed' ? 'Dismissed gap' : 'Knowledge gap'}
+                      </h4>
+                      <p>{entry.gap.description}</p>
+                      {entry.gap.dismissedReason ? (
+                        <p>
+                          <strong>Owner reason:</strong> {entry.gap.dismissedReason}
+                        </p>
+                      ) : null}
+                      {!['resolved', 'dismissed'].includes(entry.gap.status) ? (
+                        <GapDismissal gap={entry.gap} />
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <p className="coverage-action">
+                    <strong>Next action:</strong>{' '}
+                    {entry.state === 'approved' ? (
+                      <Link to="/employee">Confirm employee visibility</Link>
+                    ) : entry.state === 'candidate' || entry.state === 'conflicting' ? (
+                      <Link to="/review">Review explicit evidence</Link>
+                    ) : entry.state === 'dismissed' ? (
+                      'No knowledge was approved by dismissal.'
+                    ) : (
+                      <Link to="/interview">Answer the deterministic gap question</Link>
+                    )}
+                  </p>
+                </article>
+              ))}
+          </div>
+        )}
       </section>
 
       <section className="workspace-section" aria-labelledby="responsibilities-title">

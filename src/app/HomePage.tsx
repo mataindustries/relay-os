@@ -12,12 +12,12 @@ export function HomePage() {
   return (
     <div className="home-page">
       <section className="hero" aria-labelledby="home-title">
-        <p className="phase-label">Phase 1 · Company and role engine</p>
+        <p className="phase-label">Phase 2 · Source intake and gap interviewer</p>
         <h1 id="home-title">RelayOS</h1>
         <p className="positioning">Transfer the role, not just the instructions.</p>
         <p className="hero-summary">
-          RelayOS now establishes one company, one operational role, and a deterministic review
-          boundary for source-backed company knowledge—all in the current page session.
+          RelayOS now preserves manual plain-text sources and exact evidence, maps explicit role
+          coverage, and asks deterministic owner questions—all in the current page session.
         </p>
         <a className="text-link" href="#future-loop">
           See the future knowledge loop
@@ -38,9 +38,9 @@ export function HomePage() {
         <p className="eyebrow">Future architecture</p>
         <h2 id="loop-title">A reviewed learning loop</h2>
         <p className="section-intro">
-          Phase 1 implements the setup, review, revision, and approved-visibility boundaries. Later
-          phases may connect employee questions to the rest of this owner-controlled improvement
-          cycle.
+          Phase 2 implements source intake and the owner-side gap-to-proposal loop while preserving
+          Phase 1 review and approved visibility. Later phases may connect employee questions to the
+          rest of this owner-controlled improvement cycle.
         </p>
         <ol className="loop-list">
           {futureLoop.map((step) => (
@@ -52,9 +52,9 @@ export function HomePage() {
       <section className="phase-note" aria-labelledby="phase-title">
         <h2 id="phase-title">What exists today</h2>
         <p>
-          Phase 1 supports session-only company and role setup, manual source metadata, explicit
-          approval and rejection, immutable claim revisions, a fictional HVAC demonstration, and a
-          narrow employee visibility view. Reloading clears all data.
+          Phase 2 supports session-only role setup, manual plain-text source versions, exact line
+          references, explicit topic coverage, deterministic gap interviews, explicit approval and
+          rejection, and a narrow employee visibility view. Reloading clears all data.
         </p>
         <p>
           AI, uploads, authentication, persistence, employee question answering, training, and

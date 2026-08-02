@@ -9,7 +9,7 @@ The first supported role is **Home-Service Office Manager / Dispatcher**. RelayO
 ## People and outcomes
 
 - The **owner** supplies or confirms source material, resolves ambiguity, and approves or rejects proposed knowledge.
-- The **employee** will eventually ask operational questions, follow approved guidance, and escalate when guidance or authority is insufficient. Phase 1 only demonstrates which approved knowledge is eligible to be shown.
+- The **employee** will eventually ask operational questions, follow approved guidance, and escalate when guidance or authority is insufficient. Phase 2 still demonstrates only which approved current knowledge is eligible to be shown.
 - The **company** gains a traceable system that improves through real work without silently converting AI output into policy.
 
 A successful transfer means the employee can handle more of the defined role independently while the owner can inspect exactly what guidance was used, where it came from, and why an escalation occurred. Independence is measured from visible operational components, never a model-generated score.
@@ -35,7 +35,7 @@ employee question
 -> approved knowledge becomes available in the future
 ```
 
-This loop is a future product target. Phase 1 implements the role-definition and owner-review foundation that precedes it: one session-only company and role, manual source references, deterministic claim decisions and revisions, and an approved-only employee view. It does not accept employee questions or generate answers. See [V1 scope](V1_SCOPE.md) and the [Phase 1 execution plan](../exec-plans/phase-1-company-role-engine.md).
+This complete loop remains a future product target. Phase 2 implements its owner-side source-to-gap-to-proposal segment: one session-only company and role, immutable manual-paste source versions, exact anchors, explicit-topic coverage, deterministic interview questions, immutable owner answers, normal claim decisions/revisions, and an approved-only employee view. It does not accept employee questions or generate answers. See [V1 scope](V1_SCOPE.md) and the [Phase 2 execution plan](../exec-plans/phase-2-source-intake-interviewer.md).
 
 ## Language and boundaries
 

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import { useRelaySession } from '../../app/useRelaySession';
+import { getOperationalTopic } from '../../domain';
 
 export function EmployeePage() {
   const { snapshot, employeeVisibleKnowledge, isFictionalDemo } = useRelaySession();
@@ -9,7 +10,7 @@ export function EmployeePage() {
   if (company === null || role === null || role.status !== 'active') {
     return (
       <section className="workspace-page" aria-labelledby="employee-title">
-        <p className="phase-label">Phase 1 · Employee boundary</p>
+        <p className="phase-label">Phase 2 · Employee boundary</p>
         <h1 id="employee-title">No active role knowledge</h1>
         <p>An owner must activate the one company and role before knowledge can appear here.</p>
         <Link className="text-link" to="/setup">
@@ -22,7 +23,7 @@ export function EmployeePage() {
   return (
     <div className="workspace-page employee-page">
       <header className="workspace-header">
-        <p className="phase-label">Phase 1 · Employee boundary</p>
+        <p className="phase-label">Phase 2 · Employee boundary</p>
         <h1>{role.title}</h1>
         <p className="workspace-lede">{role.mission}</p>
         <p className="approved-boundary-note">
@@ -53,18 +54,27 @@ export function EmployeePage() {
                 </div>
                 <h3>{claim.statement}</h3>
                 <p className="record-meta">{claim.category.replaceAll('-', ' ')}</p>
+                {claim.topicKey ? (
+                  <p className="record-meta">Topic: {getOperationalTopic(claim.topicKey).label}</p>
+                ) : null}
                 <div className="evidence-block">
                   <h4>Sources</h4>
                   <ul>
                     {sourceReferences.map((source) => (
                       <li key={source.id}>
-                        {source.sourceTitle} — {source.sourceLocator}
+                        {source.sourceType === 'owner-interview'
+                          ? `${source.sourceTitle} — immutable interview evidence retained; raw question and answer withheld here`
+                          : `${source.sourceTitle} — ${source.sourceLocator}`}
                       </li>
                     ))}
                   </ul>
                   <p>
                     Approved by {approvalDecisions.at(-1)?.actorLabel ?? 'recorded owner'} with an
-                    append-only decision.
+                    append-only decision on{' '}
+                    <time dateTime={approvalDecisions.at(-1)?.decidedAt}>
+                      {approvalDecisions.at(-1)?.decidedAt ?? 'the recorded decision date'}
+                    </time>
+                    .
                   </p>
                 </div>
               </li>
@@ -74,7 +84,8 @@ export function EmployeePage() {
       </section>
 
       <aside className="narrow-boundary-note">
-        Phase 1 demonstrates visibility only. It does not provide chat or answer employee questions.
+        Phase 2 demonstrates approved visibility only. It does not provide chat or answer employee
+        questions.
       </aside>
     </div>
   );

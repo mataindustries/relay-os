@@ -4,12 +4,17 @@ import { Link } from 'react-router-dom';
 import type {
   ApprovalDecision,
   DomainResult,
+  InterviewAnswer,
+  InterviewQuestion,
   KnowledgeCategory,
   KnowledgeClaim,
+  KnowledgeGap,
   KnowledgeProvenance,
+  OperationalTopicKey,
   SourceReference,
   SourceType,
 } from '../../domain';
+import { OPERATIONAL_TOPICS, getOperationalTopic } from '../../domain';
 import { useRelaySession } from '../../app/useRelaySession';
 
 const SOURCE_TYPES: readonly SourceType[] = [
@@ -66,6 +71,14 @@ function SourcesForClaim({
             <li key={source.id}>
               <strong>{source.sourceTitle}</strong>
               <span>{source.sourceLocator}</span>
+              {source.sourceDocumentId ? (
+                <span>
+                  Version {source.sourceDocumentVersion}, lines {source.startLine}-{source.endLine}
+                </span>
+              ) : null}
+              {source.sourceType === 'owner-interview' ? (
+                <span>Immutable owner interview question and answer record</span>
+              ) : null}
               {source.excerpt ? <q>{source.excerpt}</q> : null}
             </li>
           ))}
@@ -79,6 +92,10 @@ interface ClaimReviewCardProps {
   readonly claim: KnowledgeClaim;
   readonly sources: readonly SourceReference[];
   readonly decisions: readonly ApprovalDecision[];
+  readonly allClaims: readonly KnowledgeClaim[];
+  readonly gaps: readonly KnowledgeGap[];
+  readonly interviewAnswers: readonly InterviewAnswer[];
+  readonly interviewQuestions: readonly InterviewQuestion[];
   readonly onApprove: (
     claimId: string,
     actorLabel: string,
@@ -90,19 +107,28 @@ interface ClaimReviewCardProps {
     reason: string,
   ) => DomainResult<KnowledgeClaim>;
   readonly onRevise: (claimId: string, statement: string) => DomainResult<KnowledgeClaim>;
+  readonly onEdit: (claimId: string, statement: string) => DomainResult<KnowledgeClaim>;
+  readonly onMoveToProposal: (claimId: string) => DomainResult<KnowledgeClaim>;
 }
 
 function ClaimReviewCard({
   claim,
   sources,
   decisions,
+  allClaims,
+  gaps,
+  interviewAnswers,
+  interviewQuestions,
   onApprove,
   onReject,
   onRevise,
+  onEdit,
+  onMoveToProposal,
 }: ClaimReviewCardProps) {
   const [actorLabel, setActorLabel] = useState('Owner');
   const [reason, setReason] = useState('');
   const [revisionStatement, setRevisionStatement] = useState(claim.statement);
+  const [editableStatement, setEditableStatement] = useState(claim.statement);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const decisionHistory = decisions.filter(
     ({ claimId, claimVersion }) => claimId === claim.id && claimVersion === claim.version,
@@ -113,6 +139,39 @@ function ClaimReviewCard({
     'missing-information',
     'conflicting-information',
   ].includes(claim.lifecycleStatus);
+  const relatedGap =
+    claim.topicKey === undefined
+      ? undefined
+      : gaps.find(
+          (gap) =>
+            gap.topicKey === claim.topicKey &&
+            (gap.relatedClaimIds.includes(claim.id) ||
+              !['resolved', 'dismissed'].includes(gap.status)),
+        );
+  const currentApprovedForTopic =
+    claim.topicKey === undefined
+      ? undefined
+      : allClaims.find(
+          (candidate) =>
+            candidate.id !== claim.id &&
+            candidate.topicKey === claim.topicKey &&
+            candidate.lifecycleStatus === 'approved',
+        );
+  const originLabel =
+    claim.provenance === 'owner-interview-derived'
+      ? 'Owner interview answer'
+      : claim.provenance === 'source-extracted'
+        ? 'Manual source extraction'
+        : claim.provenance === 'generated-like'
+          ? 'Fictional deterministic demo proposal'
+          : 'Existing manual owner entry';
+  const interviewAnswer = interviewAnswers.find(
+    ({ generatedClaimId }) => generatedClaimId === claim.id,
+  );
+  const interviewQuestion =
+    interviewAnswer === undefined
+      ? undefined
+      : interviewQuestions.find(({ id }) => id === interviewAnswer.questionId);
 
   function decide(kind: 'approve' | 'reject'): void {
     const result =
@@ -141,6 +200,17 @@ function ClaimReviewCard({
     );
   }
 
+  function editCandidate(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const result = onEdit(claim.id, editableStatement);
+    setFeedback(
+      feedbackFrom(
+        result,
+        'Candidate wording updated. Its original source or interview answer remains unchanged.',
+      ),
+    );
+  }
+
   return (
     <article className="review-card" aria-labelledby={`claim-${claim.id}`}>
       <div className="record-card-heading">
@@ -153,6 +223,12 @@ function ClaimReviewCard({
       <p className="record-meta">
         {claim.category.replaceAll('-', ' ')} · {claim.provenance.replaceAll('-', ' ')}
       </p>
+      <p className="record-meta">
+        <strong>Origin:</strong> {originLabel}
+        {claim.topicKey
+          ? ` · Topic: ${getOperationalTopic(claim.topicKey).label}`
+          : ' · No coverage topic assigned'}
+      </p>
       {claim.provenance === 'generated-like' ? (
         <p className="unapproved-notice">
           AI-like proposal, entered manually for this deterministic phase. No AI was used, and this
@@ -164,6 +240,61 @@ function ClaimReviewCard({
       ) : null}
 
       <SourcesForClaim claim={claim} sources={sources} />
+
+      {interviewQuestion ? (
+        <div className="evidence-block">
+          <h4>Interview question</h4>
+          <p>{interviewQuestion.prompt}</p>
+          <p className="record-meta">
+            The exact answer remains in the immutable source excerpt above.
+          </p>
+        </div>
+      ) : null}
+
+      {relatedGap ? (
+        <div className="related-gap-block">
+          <h4>Related knowledge gap</h4>
+          <p>
+            {relatedGap.description} <strong>Status:</strong>{' '}
+            {relatedGap.status.replaceAll('-', ' ')}
+          </p>
+        </div>
+      ) : null}
+      {currentApprovedForTopic ? (
+        <div className="evidence-block">
+          <h4>Current approved claim for this topic</h4>
+          <p>{currentApprovedForTopic.statement}</p>
+        </div>
+      ) : null}
+
+      {claim.lifecycleStatus === 'extracted' || claim.lifecycleStatus === 'proposed' ? (
+        <form className="revision-form" onSubmit={editCandidate}>
+          <label htmlFor={`candidate-edit-${claim.id}`}>Editable proposed statement</label>
+          <textarea
+            id={`candidate-edit-${claim.id}`}
+            rows={3}
+            value={editableStatement}
+            onChange={(event) => setEditableStatement(event.target.value)}
+          />
+          <p>The evidence and any immutable interview answer are not rewritten.</p>
+          <button className="secondary-button" type="submit">
+            Save candidate wording
+          </button>
+        </form>
+      ) : null}
+
+      {claim.lifecycleStatus === 'extracted' ? (
+        <button
+          className="primary-button"
+          type="button"
+          onClick={() => {
+            const result = onMoveToProposal(claim.id);
+            setFeedback(feedbackFrom(result, 'Extracted claim moved to proposed review state.'));
+          }}
+        >
+          Move extracted claim to review
+        </button>
+      ) : null}
 
       {claim.lifecycleStatus === 'proposed' || canReject ? (
         <div className="decision-controls">
@@ -264,6 +395,7 @@ export function ReviewPage() {
     category: 'procedure' as KnowledgeCategory,
     provenance: 'owner-authored' as KnowledgeProvenance,
     sourceReferenceIds: [] as string[],
+    topicKey: '' as OperationalTopicKey | '',
   });
   const [sourceFeedback, setSourceFeedback] = useState<Feedback | null>(null);
   const [claimFeedback, setClaimFeedback] = useState<Feedback | null>(null);
@@ -271,7 +403,7 @@ export function ReviewPage() {
   if (company === null || role === null || role.status !== 'active') {
     return (
       <section className="workspace-page" aria-labelledby="review-title">
-        <p className="phase-label">Phase 1 · Knowledge review</p>
+        <p className="phase-label">Phase 2 · Knowledge review</p>
         <h1 id="review-title">No active role to review</h1>
         <p>Complete setup or load the fictional demo before adding source-backed knowledge.</p>
         <Link className="text-link" to="/setup">
@@ -293,8 +425,12 @@ export function ReviewPage() {
   function createClaim(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const result = session.createKnowledgeClaim({
-      ...claimDraft,
+      statement: claimDraft.statement,
+      category: claimDraft.category,
+      provenance: claimDraft.provenance,
+      sourceReferenceIds: claimDraft.sourceReferenceIds,
       lifecycleStatus: 'proposed',
+      ...(claimDraft.topicKey === '' ? {} : { topicKey: claimDraft.topicKey }),
     });
     setClaimFeedback(feedbackFrom(result, 'Proposed knowledge recorded as visibly unapproved.'));
     if (result.ok) {
@@ -303,6 +439,7 @@ export function ReviewPage() {
         category: 'procedure',
         provenance: 'owner-authored',
         sourceReferenceIds: [],
+        topicKey: '',
       });
     }
   }
@@ -319,11 +456,12 @@ export function ReviewPage() {
   return (
     <div className="workspace-page review-page">
       <header className="workspace-header">
-        <p className="phase-label">Phase 1 · Owner knowledge review</p>
+        <p className="phase-label">Phase 2 · Owner knowledge review</p>
         <h1>Review source-backed knowledge</h1>
         <p className="workspace-lede">
           Manual proposals remain unapproved until a domain operation appends an explicit owner
-          decision. No AI or document upload is active.
+          decision. Source extraction and the interviewer are deterministic; no AI or upload is
+          active.
         </p>
       </header>
 
@@ -439,6 +577,25 @@ export function ReviewPage() {
                 ))}
               </select>
             </label>
+            <label>
+              Operational topic (optional for legacy manual entry)
+              <select
+                value={claimDraft.topicKey}
+                onChange={(event) =>
+                  setClaimDraft({
+                    ...claimDraft,
+                    topicKey: event.target.value as OperationalTopicKey | '',
+                  })
+                }
+              >
+                <option value="">No coverage topic</option>
+                {OPERATIONAL_TOPICS.map((topic) => (
+                  <option key={topic.key} value={topic.key}>
+                    {topic.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <fieldset className="source-choice-list">
               <legend>Source references</legend>
               {sourceReferences.length === 0 ? (
@@ -503,6 +660,10 @@ export function ReviewPage() {
                 claim={claim}
                 sources={sourceReferences}
                 decisions={approvalDecisions}
+                allClaims={knowledgeClaims}
+                gaps={session.snapshot.knowledgeGaps}
+                interviewAnswers={session.snapshot.interviewAnswers}
+                interviewQuestions={session.snapshot.interviewQuestions}
                 onApprove={(claimId, actorLabel, reason) =>
                   session.approveKnowledgeClaim({ claimId, actorLabel, reason })
                 }
@@ -511,6 +672,12 @@ export function ReviewPage() {
                 }
                 onRevise={(claimId, statement) =>
                   session.createApprovedClaimRevision({ claimId, statement })
+                }
+                onEdit={(claimId, statement) =>
+                  session.updateKnowledgeClaim(claimId, { statement })
+                }
+                onMoveToProposal={(claimId) =>
+                  session.transitionKnowledgeClaim(claimId, 'proposed')
                 }
               />
             ))}

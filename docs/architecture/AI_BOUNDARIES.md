@@ -2,7 +2,7 @@
 
 ## Current state
 
-Phase 1 makes no model calls, installs no AI SDK, and has no prompt, ingestion, semantic retrieval, or generation pipeline. Manually entered proposed claims and fixed fictional demo records exercise review states; they are not AI output or simulations of production AI. Any model behavior below is a constraint for a later approved execution plan.
+Phase 2 makes no model calls, installs no AI SDK, and has no prompt, autonomous ingestion, semantic retrieval, or generation pipeline. Source text is pasted manually; owners choose exact lines, topics, and candidate wording. The Knowledge Gap Interviewer is a deterministic catalog/rule workflow: checked-in templates and typed answers control its queue and follow-ups. Interview answers become source-backed proposed claims and are not AI output or approved policy. Any model behavior below is a constraint for a later approved execution plan.
 
 ## Future boundary
 
@@ -43,13 +43,13 @@ If any check fails, the result is withheld and RelayOS creates an escalation and
 
 Future generated candidates must enter an unapproved lifecycle state. An owner sees the proposed change, generation label, sources, conflicts, and missing evidence, then records an explicit decision. Approval creates or publishes a distinct immutable knowledge revision; it does not erase the candidate’s generated origin. Rejections remain in history and outside employee retrieval.
 
-Phase 1 already establishes the deterministic subset of that boundary: only a manually created `proposed` claim can be approved; source provenance and an explicit approval decision are mandatory; approved claims are immutable; revisions create new versions; and rejection or unresolved states never become employee-visible. This behavior contains no model-specific branch.
+The completed Phase 1 lifecycle and Phase 2 additions establish the deterministic subset of that boundary: only a `proposed` claim can be approved; source provenance and an explicit approval decision are mandatory; approved claims and available source versions are immutable; revisions create new versions; and extraction, interviews, gaps, rejection, or unresolved states never become employee-visible. This behavior contains no model-specific branch.
 
 ## Deterministic demonstration mode
 
-Phase 1 includes a fixed fictional HVAC company, role, manual source-reference metadata, and claims in approved, proposed, rejected, and conflicting states. Repeated loading is idempotent, and the employee view uses the same approved-knowledge selector as owner-entered records. It performs no network or model request and never labels its fixture text as live or generated output.
+Phase 2 includes a fixed fictional HVAC company and role plus manual-paste document versions, historical line anchors, explicit-topic claims and coverage, reconciled gaps, deterministic questions, and one immutable answered-but-unapproved interview proposal. Repeated loading is idempotent, and the employee view uses the same approved-knowledge selector as owner-entered records. It performs no network or model request and never labels fixture text as live, automatically understood, or generated output.
 
-Later demonstration phases may add seeded retrieval, answer, or escalation outcomes only when an execution plan authorizes those features; they must continue using the production domain gates.
+Later demonstration phases may add seeded employee retrieval, answer, or escalation outcomes only when an execution plan authorizes those features; they must continue using the production domain gates.
 
 ## Verification expectations for later phases
 

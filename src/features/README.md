@@ -1,3 +1,3 @@
 # Feature boundary
 
-Future user workflows will be organized here by product capability. Phase 0 intentionally contains no setup, ingestion, review, answering, training, or settings implementation.
+User workflows are organized here by product capability. Phase 2 includes setup, owner coverage, manual plain-text sources, deterministic gap interviewing, review, and approved-only employee display. Employee answering, training, and durable settings remain unavailable.

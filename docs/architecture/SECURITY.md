@@ -1,10 +1,10 @@
 # Security boundary
 
-## Phase 1 posture
+## Phase 2 posture
 
-RelayOS still ships public static assets only. Phase 1 can hold owner-entered company, role, source-reference, claim, and approval records in browser memory until reload. It authenticates no users, provides no authorization, accepts no uploads, performs no external requests, calls no model, and configures no Cloudflare Workers, D1, R2, KV, or production secrets.
+RelayOS still ships public static assets only. Phase 2 can hold owner-entered company, role, pasted plain-text source documents, exact references, claims, gaps, interview questions/answers, and approval records in browser memory until reload. It authenticates no users, provides no authorization, accepts no files, performs no external requests or telemetry, calls no model, and configures no Cloudflare Workers, D1, R2, KV, or production secrets.
 
-The session-only engine is a deterministic product demonstration, not a safe store for real confidential company information. “Owner” and “employee” name product perspectives, not verified identities or access-control roles; direct navigation is public. UI separation is not authorization.
+The session-only engine is a deterministic product demonstration, not a safe store for real confidential company information. Pasted text is rendered as escaped React text, is not placed in URLs or console output, and disappears on reload; these properties are not encryption, access control, durability, or a retention guarantee. “Owner” and “employee” name product perspectives, not verified identities or access-control roles; direct navigation is public. UI separation is not authorization.
 
 No secret may be placed in source code, browser bundles, Vite-exposed environment variables, demo fixtures, tests, logs, or committed configuration. Values embedded in a static build are public by definition.
 
@@ -24,7 +24,7 @@ Source material, questions, answers, escalation context, user identity, approval
 
 In a future authenticated system, an owner may review and append approval decisions for the single company/role. An employee may ask questions, view eligible answers and training, submit attempts, and create operational signals, but may not approve knowledge or extend authority. Every server read and write must enforce company and role scope; UI visibility is not authorization.
 
-Identity and authentication are intentionally absent in Phase 1 and require their own threat model and execution plan before protected data is introduced.
+Identity and authentication are intentionally absent in Phase 2 and require their own threat model and execution plan before protected data is introduced.
 
 ## AI and evidence threats
 
@@ -34,11 +34,13 @@ Model output must be escaped as data, never executed as HTML, code, queries, or 
 
 ## Integrity and audit
 
+- Available source-document versions and anchored excerpts are immutable for the lifetime of the current in-memory session; correction creates a new version and does not rewrite historical references.
+- Interview answers retain their exact source excerpt; correction appends a new answer, source, and candidate claim.
 - Approved claim versions retain immutable source-reference IDs and all decisions for the lifetime of the current in-memory session.
-- Approval decisions are append-only through Phase 1 domain-service operations; corrections require a new eligible decision or claim revision rather than overwrite.
+- Approval decisions are append-only through the existing domain-service operations; corrections require a new eligible decision or claim revision rather than overwrite.
 - These in-memory guarantees do not survive reload and are not a durable audit trail.
 - Future activity events must identify actor, time, target revision, action, and correlation context while avoiding unnecessary sensitive payloads.
-- Future source integrity metadata and revision locators must allow later verification; source withdrawal cannot erase historical approval provenance.
+- Phase 2 line anchors provide deterministic addressing, not cryptographic integrity or source authentication. Future integrity metadata and revision locators must allow later verification; source withdrawal cannot erase historical approval provenance.
 - Future independence metrics must store their deterministic inputs and formula version.
 
 ## Later-phase security acceptance criteria

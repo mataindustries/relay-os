@@ -2,9 +2,11 @@ import { NavLink, Outlet, Route, Routes } from 'react-router-dom';
 
 import type { PhaseOneService } from '../domain';
 import { EmployeePage } from '../features/employee';
+import { InterviewPage } from '../features/interview';
 import { OwnerPage } from '../features/owner';
 import { ReviewPage } from '../features/review';
 import { SetupRoute } from '../features/setup';
+import { SourcePage } from '../features/sources';
 import { FuturePhasePage } from './FuturePhasePage';
 import { HomePage } from './HomePage';
 import { NotFoundPage } from './NotFoundPage';
@@ -14,6 +16,8 @@ const navigation = [
   { to: '/', label: 'Home' },
   { to: '/setup', label: 'Setup' },
   { to: '/owner', label: 'Owner' },
+  { to: '/sources', label: 'Sources' },
+  { to: '/interview', label: 'Interview' },
   { to: '/employee', label: 'Employee' },
   { to: '/review', label: 'Review' },
   { to: '/training', label: 'Training' },
@@ -49,7 +53,7 @@ function AppShell() {
         <Outlet />
       </main>
       <footer className="site-footer">
-        <p>RelayOS · Phase 1 company and role engine · session-only</p>
+        <p>RelayOS · Phase 2 source and gap interview engine · session-only</p>
       </footer>
     </div>
   );
@@ -62,6 +66,8 @@ function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="/setup" element={<SetupRoute />} />
         <Route path="/owner" element={<OwnerPage />} />
+        <Route path="/sources" element={<SourcePage />} />
+        <Route path="/interview" element={<InterviewPage />} />
         <Route path="/employee" element={<EmployeePage />} />
         <Route path="/review" element={<ReviewPage />} />
         <Route
@@ -69,7 +75,7 @@ function AppRoutes() {
           element={
             <FuturePhasePage
               title="Training"
-              description="Training scenarios and assessment remain outside Phase 1. No training activity or scoring is available."
+              description="Training scenarios and assessment remain outside Phase 2. No training activity or scoring is available."
             />
           }
         />
@@ -78,7 +84,7 @@ function AppRoutes() {
           element={
             <FuturePhasePage
               title="Settings"
-              description="Durable settings, identity, and production configuration remain outside Phase 1."
+              description="Durable settings, identity, and production configuration remain outside Phase 2."
             />
           }
         />

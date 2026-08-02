@@ -1,6 +1,6 @@
 # RelayOS user journeys
 
-These are target V1 journeys unless explicitly labeled Phase 1. They define outcomes and safety gates, not permission to implement later-phase features.
+These are target V1 journeys unless explicitly labeled Phase 1 or Phase 2. They define outcomes and safety gates, not permission to implement later-phase features.
 
 ## Phase 1: owner establishes the role system
 
@@ -29,17 +29,31 @@ The owner may instead load the fixed fictional Summit Comfort Heating & Air reco
 3. The selector returns only approved, current, nonsuperseded claims in the active company and role scope.
 4. If none qualify, the route explains that no approved knowledge is available.
 
-There is no question box, chat, generated answer, training, or score in this phase. Proposed, extracted, rejected, missing-information, conflicting-information, and superseded claims never enter this view.
+There is no employee question box, chat, generated answer, training, or score in Phase 2. Proposed, extracted, rejected, missing-information, conflicting-information, and superseded claims never enter this view; source documents, gaps, interview questions, and raw answers are also withheld.
 
-## Future: source-assisted role-system development
+## Phase 2: owner builds exact source-backed candidates
 
-1. The owner defines the company and the Home-Service Office Manager / Dispatcher role.
-2. The owner records responsibilities, authority boundaries, escalation rules, and source material.
-3. RelayOS extracts claims and drafts procedures or decision rules as unapproved candidates with source references.
-4. The owner inspects evidence and approves, rejects, or requests changes.
-5. Approval appends a decision and publishes a traceable approved revision; rejection remains visible in history but unavailable to employee retrieval.
+1. The owner defines the company and role or loads the fixed fictional Summit Comfort record.
+2. In the Source Library, the owner selects a constrained type, enters source metadata, pastes plain text, and saves a draft in current-session memory.
+3. A nonblank draft becomes an immutable available version with stable one-based lines. A correction creates and later activates a new version without deleting the predecessor.
+4. The owner selects a valid inclusive line range. RelayOS derives the exact immutable reference excerpt from that historical version.
+5. The owner writes one claim, assigns its operational topic explicitly, and creates it as extracted and unapproved. RelayOS performs no semantic interpretation or automatic extraction.
+6. The owner moves extracted knowledge to proposed review state, may edit candidate wording without rewriting evidence, and uses the existing approve/reject operation.
+7. Approval appends a decision and may make current same-topic knowledge employee-eligible; rejection retains the claim, evidence, and decision.
 
 **Safety gate:** no item can become employee-visible without source references and an owner approval decision.
+
+## Phase 2: owner maps coverage and answers gaps
+
+1. A pure projection evaluates the 16 canonical role topics using only explicit topic keys, claim lifecycles, resolvable sources, decisions, and gap records.
+2. The owner sees approved, candidate, explicitly conflicting, missing, or dismissed coverage with supporting records. Coverage is not a compliance, readiness, safety, or quality score.
+3. Idempotent reconciliation retains at most one active unresolved gap per scoped topic and orders questions by risk, catalog position, and checked-in template sequence.
+4. The interviewer shows one deterministic question, its rationale, what it unlocks, and available explicit evidence or its absence.
+5. The owner answers through the required typed control or skips with a reason. Typed values may trigger only checked-in follow-ups for discounts, after-hours, emergency, refunds, or permits.
+6. Submission retains the exact immutable answer, creates an `owner-interview` source reference, and creates a same-topic proposed claim. It does not approve or silently resolve anything.
+7. The owner reviews that claim through the Phase 1 decision workflow. Correct approval resolves the related gap and permits the existing selector to show the claim; rejection leaves answer and gap history intact.
+
+**Safety gate:** a gap state, answer, dismissal, or proposed claim never affects employee visibility directly. Only the approved-knowledge selector does.
 
 ## Future: employee asks an operational question
 

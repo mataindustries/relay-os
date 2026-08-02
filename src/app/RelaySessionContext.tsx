@@ -2,11 +2,20 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import {
   PhaseOneService,
+  evaluateTopicCoverage,
   selectEmployeeVisibleKnowledge,
+  type AnchoredSourceReferenceInput,
   type ApprovedClaimRevisionInput,
   type ClaimDecisionInput,
   type DomainResult,
+  type InterviewAnswerInput,
   type KnowledgeClaimInput,
+  type KnowledgeClaimUpdates,
+  type KnowledgeLifecycleStatus,
+  type ManualExtractedClaimInput,
+  type SourceDocumentInput,
+  type SourceDocumentRevisionInput,
+  type SourceDocumentUpdates,
   type SourceReferenceInput,
 } from '../domain';
 import { loadSummitComfortDemo, SUMMIT_COMFORT_DEMO_COMPANY_ID } from '../demo';
@@ -41,8 +50,8 @@ export function RelaySessionProvider({
 
   const completeSetup = useCallback(
     (draft: SetupDraft): SetupActionResult => {
-      const result = perform(() =>
-        service.activateSetup({
+      const result = perform(() => {
+        const activation = service.activateSetup({
           company: draft.company,
           role: {
             ...draft.role,
@@ -68,8 +77,11 @@ export function RelaySessionProvider({
               expectedResponse: item.expectedResponse,
             })),
           },
-        }),
-      );
+        });
+        if (!activation.ok) return activation;
+        const reconciliation = service.reconcileKnowledgeGaps();
+        return reconciliation.ok ? activation : { ok: false as const, error: reconciliation.error };
+      });
       return result.ok
         ? {
             ok: true,
@@ -96,8 +108,45 @@ export function RelaySessionProvider({
     (input: SourceReferenceInput) => perform(() => service.createSourceReference(input)),
     [perform, service],
   );
+  const createSourceDocument = useCallback(
+    (input: SourceDocumentInput) => perform(() => service.createSourceDocument(input)),
+    [perform, service],
+  );
+  const updateSourceDocumentDraft = useCallback(
+    (documentId: string, updates: SourceDocumentUpdates) =>
+      perform(() => service.updateSourceDocumentDraft(documentId, updates)),
+    [perform, service],
+  );
+  const activateSourceDocument = useCallback(
+    (documentId: string) => perform(() => service.activateSourceDocument(documentId)),
+    [perform, service],
+  );
+  const createSourceDocumentRevision = useCallback(
+    (input: SourceDocumentRevisionInput) =>
+      perform(() => service.createSourceDocumentRevision(input)),
+    [perform, service],
+  );
+  const createAnchoredSourceReference = useCallback(
+    (input: AnchoredSourceReferenceInput) =>
+      perform(() => service.createAnchoredSourceReference(input)),
+    [perform, service],
+  );
   const createKnowledgeClaim = useCallback(
     (input: KnowledgeClaimInput) => perform(() => service.createKnowledgeClaim(input)),
+    [perform, service],
+  );
+  const createManualExtractedClaim = useCallback(
+    (input: ManualExtractedClaimInput) => perform(() => service.createManualExtractedClaim(input)),
+    [perform, service],
+  );
+  const updateKnowledgeClaim = useCallback(
+    (claimId: string, updates: KnowledgeClaimUpdates) =>
+      perform(() => service.updateKnowledgeClaim(claimId, updates)),
+    [perform, service],
+  );
+  const transitionKnowledgeClaim = useCallback(
+    (claimId: string, target: KnowledgeLifecycleStatus) =>
+      perform(() => service.transitionKnowledgeClaim(claimId, target)),
     [perform, service],
   );
   const approveKnowledgeClaim = useCallback(
@@ -113,6 +162,27 @@ export function RelaySessionProvider({
       perform(() => service.createApprovedClaimRevision(input)),
     [perform, service],
   );
+  const reconcileKnowledgeGaps = useCallback(
+    () => perform(() => service.reconcileKnowledgeGaps()),
+    [perform, service],
+  );
+  const dismissKnowledgeGap = useCallback(
+    (gapId: string, reason: string) => perform(() => service.dismissKnowledgeGap(gapId, reason)),
+    [perform, service],
+  );
+  const generateInterviewQuestions = useCallback(
+    () => perform(() => service.generateInterviewQuestions()),
+    [perform, service],
+  );
+  const skipInterviewQuestion = useCallback(
+    (questionId: string, reason: string) =>
+      perform(() => service.skipInterviewQuestion(questionId, reason)),
+    [perform, service],
+  );
+  const submitInterviewAnswer = useCallback(
+    (input: InterviewAnswerInput) => perform(() => service.submitInterviewAnswer(input)),
+    [perform, service],
+  );
 
   const value = useMemo<RelaySessionValue>(
     () => ({
@@ -122,24 +192,53 @@ export function RelaySessionProvider({
       hasActiveSetup: snapshot.company !== null && snapshot.role !== null,
       isFictionalDemo: snapshot.company?.id === SUMMIT_COMFORT_DEMO_COMPANY_ID,
       employeeVisibleKnowledge: selectEmployeeVisibleKnowledge(snapshot),
+      coverageResult: evaluateTopicCoverage(snapshot),
+      interviewQueue: service.prioritizedInterviewQuestions(),
       completeSetup,
       loadDemo,
       createSourceReference,
+      createSourceDocument,
+      updateSourceDocumentDraft,
+      activateSourceDocument,
+      createSourceDocumentRevision,
+      createAnchoredSourceReference,
       createKnowledgeClaim,
+      createManualExtractedClaim,
+      updateKnowledgeClaim,
+      transitionKnowledgeClaim,
       approveKnowledgeClaim,
       rejectKnowledgeClaim,
       createApprovedClaimRevision,
+      reconcileKnowledgeGaps,
+      dismissKnowledgeGap,
+      generateInterviewQuestions,
+      skipInterviewQuestion,
+      submitInterviewAnswer,
     }),
     [
       approveKnowledgeClaim,
       completeSetup,
+      createAnchoredSourceReference,
       createApprovedClaimRevision,
       createKnowledgeClaim,
+      createManualExtractedClaim,
+      createSourceDocument,
       createSourceReference,
+      dismissKnowledgeGap,
+      generateInterviewQuestions,
       loadDemo,
+      reconcileKnowledgeGaps,
       rejectKnowledgeClaim,
       setupDraft,
+      skipInterviewQuestion,
       snapshot,
+      submitInterviewAnswer,
+      updateKnowledgeClaim,
+      transitionKnowledgeClaim,
+      updateSourceDocumentDraft,
+      activateSourceDocument,
+      createSourceDocumentRevision,
+      service,
     ],
   );
 

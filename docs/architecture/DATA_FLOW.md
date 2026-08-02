@@ -1,16 +1,16 @@
 # RelayOS data flow
 
-This document separates the Phase 1 implementation from planned V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); no persistence, ingestion, employee-question, or model pipeline exists yet.
+This document separates the Phase 2 implementation from planned V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); there is still no persistence, file-ingestion, employee-question, or model pipeline.
 
-## Phase 1 session boundary
+## Phase 2 session boundary
 
 ```text
 browser request -> Cloudflare Pages static asset / SPA fallback
-                -> React Router -> Phase 1 route
+                -> React Router -> Phase 2 route
 
 one React context
   -> one in-memory repository for the page session
-  -> domain service validates every scoped write and lifecycle operation
+  -> existing domain service validates every scoped write and lifecycle operation
   -> defensive repository reads
 ```
 
@@ -45,21 +45,42 @@ The selector also verifies active company/role scope, resolvable sources, and de
 
 The fixed Summit Comfort Heating & Air fixture passes through the same repository and domain policies. Its stable IDs make repeated loading in one session idempotent.
 
-## Future source-ingestion flow
+## Phase 2 manual source flow
 
 ```text
-SourceDocument
-  -> immutable SourceReferences
-  -> extracted KnowledgeClaims (unapproved)
-  -> candidate Procedure / DecisionRule / Boundary / Responsibility
-  -> owner ApprovalDecision
-  -> approved immutable revision
-  -> employee retrieval eligibility
+owner pastes plain text in browser memory
+  -> SourceDocument draft
+  -> activate immutable numbered version
+  -> owner selects exact inclusive lines
+  -> derived immutable SourceReference excerpt
+  -> owner assigns a canonical topic and writes an extracted KnowledgeClaim
+  -> extracted/proposed and employee-invisible
+  -> existing owner ApprovalDecision operation
+  -> approved current claim OR retained rejection
+  -> employee selector eligibility only after approval
 ```
 
-Extraction and generation never skip review. Each transition preserves scope, origin, source references, revision IDs, and activity events. Rejected revisions remain traceable and unavailable to employee retrieval. Missing evidence creates a gap; competing evidence retains both claims/references and creates a conflict gap.
+There is no automatic extraction or interpretation. An available document cannot be edited; a correction creates a new draft version, and activation supersedes without deleting the predecessor or rewriting its references. Existing Phase 1 metadata-only references remain valid.
 
-## Future employee question flow (not Phase 1)
+## Phase 2 coverage and interview flow
+
+```text
+canonical topic catalog + explicit claim.topicKey
+  -> pure coverage projection: approved | candidate | conflicting | missing | dismissed
+  -> idempotent scoped KnowledgeGap reconciliation
+  -> deterministic risk/topic/template question queue
+  -> one active InterviewQuestion
+  -> exact immutable InterviewAnswer
+  -> owner-interview SourceReference
+  -> same-topic proposed KnowledgeClaim (unapproved)
+  -> existing owner decision
+  -> correct approval resolves gap and becomes selector-eligible
+     rejection retains answer/claim/decision and leaves gap unresolved
+```
+
+Coverage does not compare free text. A conflict must already be explicit through claim lifecycle data. Question follow-ups depend only on typed values and checked-in rules. Gap status never controls employee visibility; the Phase 1 claim selector remains the read boundary.
+
+## Future employee question flow (not Phase 2)
 
 1. Store the `EmployeeQuestion` in company and role scope.
 2. Retrieve candidate knowledge with a hard approved/current/scope filter.
@@ -70,7 +91,7 @@ Extraction and generation never skip review. Each transition preserves scope, or
 
 Retrieval is fail-closed: filtering after generation is insufficient because unapproved material must not enter the answer context.
 
-## Future gap-to-improvement flow (not Phase 1)
+## Future employee-signal gap-to-improvement flow (not Phase 2)
 
 ```text
 Question / Escalation / ScenarioAttempt
@@ -84,7 +105,7 @@ Question / Escalation / ScenarioAttempt
 
 Resolving or closing an escalation does not approve knowledge. Approving a proposal does not mutate its provenance; publication produces or activates a distinct knowledge revision after all source and approval requirements pass.
 
-## Future training and measurement flow (not Phase 1)
+## Future training and measurement flow (not Phase 2)
 
 Only approved knowledge can support an employee-visible `TrainingScenario`. A `ScenarioAttempt` retains the exact scenario and rubric revision. Deterministic evaluation components may feed an `IndependenceMetric` together with approved responsibility coverage and appropriate-escalation events. Each metric snapshot stores its formula version and linked inputs; no model produces the score.
 
