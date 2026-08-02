@@ -5,7 +5,10 @@ import type {
   AnchoredSourceReferenceInput,
   ClaimDecisionInput,
   DomainResult,
+  EmployeeQuestion,
+  EmployeeQuestionInput,
   EmployeeVisibleKnowledge,
+  Escalation,
   InterviewAnswer,
   InterviewAnswerInput,
   InterviewQuestion,
@@ -16,6 +19,7 @@ import type {
   KnowledgeGap,
   ManualExtractedClaimInput,
   PhaseOneSnapshot,
+  QuestionEvaluationOutcome,
   SourceDocument,
   SourceDocumentInput,
   SourceDocumentRevisionInput,
@@ -76,6 +80,20 @@ export interface RelaySessionValue {
     reason: string,
   ) => DomainResult<InterviewQuestion>;
   readonly submitInterviewAnswer: (input: InterviewAnswerInput) => DomainResult<InterviewAnswer>;
+  readonly submitEmployeeQuestion: (input: EmployeeQuestionInput) => DomainResult<EmployeeQuestion>;
+  readonly evaluateEmployeeQuestion: (
+    questionId: string,
+  ) => DomainResult<QuestionEvaluationOutcome>;
+  readonly assignEscalation: (
+    escalationId: string,
+    assignedToLabel: string,
+  ) => DomainResult<Escalation>;
+  readonly resolveEscalation: (
+    escalationId: string,
+    resolutionSummary: string,
+    resolvedByLabel: string,
+  ) => DomainResult<Escalation>;
+  readonly closeEscalation: (escalationId: string) => DomainResult<Escalation>;
 }
 
 export const RelaySessionContext = createContext<RelaySessionValue | null>(null);

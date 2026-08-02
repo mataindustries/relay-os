@@ -109,6 +109,11 @@ export interface AuthorityBoundary {
   readonly limitOrConstraint: string;
   readonly escalationDestination: string;
   readonly notes: string;
+  readonly topicKeys?: readonly OperationalTopicKey[];
+  readonly applicableRequestTypes?: readonly EmployeeQuestionRequestType[];
+  readonly numericLimit?: number;
+  readonly currency?: CurrencyCode;
+  readonly structuredConstraintType?: 'amount-limit';
 }
 
 export interface EscalationRule {
@@ -119,6 +124,10 @@ export interface EscalationRule {
   readonly urgency: EscalationUrgency;
   readonly requiredContext: string;
   readonly expectedResponse: string;
+  readonly topicKeys?: readonly OperationalTopicKey[];
+  readonly applicableRequestTypes?: readonly EmployeeQuestionRequestType[];
+  readonly urgencyMatch?: EscalationUrgency;
+  readonly sensitivityCategories?: readonly EmployeeSensitivitySelection[];
 }
 
 export interface Role {
@@ -292,7 +301,12 @@ export interface ManualExtractedClaimInput {
 }
 
 export type KnowledgeGapReason =
-  'missing-evidence' | 'incomplete-evidence' | 'conflicting-evidence' | 'authority-unclear';
+  | 'missing-evidence'
+  | 'incomplete-evidence'
+  | 'conflicting-evidence'
+  | 'authority-unclear'
+  | 'invalid-provenance'
+  | 'unsupported-request';
 
 export type KnowledgeGapStatus =
   'open' | 'question-ready' | 'answered' | 'proposal-created' | 'resolved' | 'dismissed';
@@ -313,6 +327,9 @@ export interface KnowledgeGap {
   readonly updatedAt: string;
   readonly resolvedByClaimId?: string;
   readonly dismissedReason?: string;
+  readonly originalReason?: KnowledgeGapReason;
+  readonly triggeringQuestionIds?: readonly string[];
+  readonly eligibilityEvaluationIds?: readonly string[];
 }
 
 export type InterviewQuestionStatus = 'queued' | 'active' | 'answered' | 'skipped' | 'withdrawn';
@@ -398,6 +415,269 @@ export interface TopicCoverage {
   readonly gap?: KnowledgeGap;
 }
 
+export type EmployeeQuestionRequestType =
+  | 'policy-lookup'
+  | 'procedure-lookup'
+  | 'decision-request'
+  | 'exception-request'
+  | 'financial-action'
+  | 'emergency-action'
+  | 'customer-commitment';
+
+export type EmployeeSensitivitySelection =
+  | 'none'
+  | 'customer-personal-data'
+  | 'credentials-or-access'
+  | 'payment-data'
+  | 'health-or-safety'
+  | 'legal-or-regulatory'
+  | 'other-sensitive';
+
+export type CurrencyCode = 'USD' | 'CAD';
+export type FinancialActionType = 'discount' | 'refund' | 'charge' | 'waive-fee' | 'other';
+export type EmergencyCategory =
+  | 'gas-odor'
+  | 'carbon-monoxide'
+  | 'smoke-or-fire'
+  | 'electrical-hazard'
+  | 'water-leak'
+  | 'no-heating-or-cooling'
+  | 'other';
+export type CustomerCommitmentType =
+  'arrival-window' | 'price-or-estimate' | 'service-availability' | 'completion-date' | 'other';
+
+export interface PolicyLookupContext {
+  readonly requestType: 'policy-lookup';
+}
+
+export interface ProcedureLookupContext {
+  readonly requestType: 'procedure-lookup';
+  readonly currentStepLabel?: string;
+}
+
+export interface DecisionRequestContext {
+  readonly requestType: 'decision-request';
+  readonly proposedAction: string;
+  readonly subject?: string;
+}
+
+export interface ExceptionRequestContext {
+  readonly requestType: 'exception-request';
+  readonly requestedException: string;
+  readonly reason: string;
+}
+
+export interface FinancialActionContext {
+  readonly requestType: 'financial-action';
+  readonly actionType: FinancialActionType;
+  readonly amount: number;
+  readonly currency: CurrencyCode;
+}
+
+export interface EmergencyActionContext {
+  readonly requestType: 'emergency-action';
+  readonly urgency: Extract<EscalationUrgency, 'same-day' | 'immediate'>;
+  readonly emergencyCategory: EmergencyCategory;
+}
+
+export interface CustomerCommitmentContext {
+  readonly requestType: 'customer-commitment';
+  readonly commitmentType: CustomerCommitmentType;
+  readonly amount?: number;
+  readonly currency?: CurrencyCode;
+  readonly commitmentDate?: string;
+}
+
+export type StructuredQuestionContext =
+  | PolicyLookupContext
+  | ProcedureLookupContext
+  | DecisionRequestContext
+  | ExceptionRequestContext
+  | FinancialActionContext
+  | EmergencyActionContext
+  | CustomerCommitmentContext;
+
+export type EmployeeQuestionStatus =
+  'received' | 'evaluating' | 'answered' | 'withheld' | 'escalated' | 'closed';
+
+export interface EmployeeQuestion {
+  readonly id: string;
+  readonly companyId: string;
+  readonly roleId: string;
+  readonly employeeLabel: string;
+  readonly questionText: string;
+  readonly topicKey: OperationalTopicKey;
+  readonly requestType: EmployeeQuestionRequestType;
+  readonly sensitivitySelection: EmployeeSensitivitySelection;
+  readonly structuredContext: StructuredQuestionContext;
+  readonly status: EmployeeQuestionStatus;
+  readonly submittedAt: string;
+  readonly closedAt?: string;
+  readonly correctsQuestionId?: string;
+  readonly correlationId: string;
+}
+
+export interface EmployeeQuestionInput {
+  readonly employeeLabel: string;
+  readonly questionText: string;
+  readonly topicKey: OperationalTopicKey;
+  readonly requestType: EmployeeQuestionRequestType;
+  readonly sensitivitySelection: EmployeeSensitivitySelection;
+  readonly structuredContext: StructuredQuestionContext;
+  readonly correctsQuestionId?: string;
+}
+
+export type AnswerEligibilityResult =
+  | 'answer-eligible'
+  | 'escalation-required'
+  | 'prohibited'
+  | 'withheld-missing-knowledge'
+  | 'withheld-conflicting-knowledge'
+  | 'withheld-invalid-provenance'
+  | 'withheld-sensitive'
+  | 'withheld-authority-unclear'
+  | 'withheld-unsupported-request';
+
+export type AnswerEligibilityGateKey =
+  | 'scope-valid'
+  | 'topic-valid'
+  | 'request-context-valid'
+  | 'current-approved-knowledge-present'
+  | 'provenance-valid'
+  | 'no-explicit-conflict'
+  | 'sensitivity-clear'
+  | 'authority-clear'
+  | 'escalation-rule-clear'
+  | 'answer-mode-supported';
+
+export type AnswerEligibilityGateStatus = 'pass' | 'fail' | 'not-applicable';
+
+export interface AnswerEligibilityGateResult {
+  readonly gateKey: AnswerEligibilityGateKey;
+  readonly status: AnswerEligibilityGateStatus;
+  readonly reason: string;
+  readonly supportingRecordIds: readonly string[];
+}
+
+export interface AnswerEligibilityEvaluation {
+  readonly id: string;
+  readonly questionId: string;
+  readonly evaluatedAt: string;
+  readonly overallResult: AnswerEligibilityResult;
+  readonly gateResults: readonly AnswerEligibilityGateResult[];
+  readonly eligibleClaimIds: readonly string[];
+  readonly eligibleSourceReferenceIds: readonly string[];
+  readonly approvalDecisionIds: readonly string[];
+  readonly matchingAuthorityBoundaryIds: readonly string[];
+  readonly matchingEscalationRuleIds: readonly string[];
+  readonly withholdReason?: AnswerEligibilityResult;
+  readonly correlationId: string;
+}
+
+export type AnswerStatus = 'delivered' | 'withheld' | 'escalated' | 'prohibited';
+export type AnswerMode =
+  | 'approved-guidance'
+  | 'approved-guidance-with-authority'
+  | 'known-escalation'
+  | 'prohibited-action'
+  | 'withheld';
+
+export interface Answer {
+  readonly id: string;
+  readonly questionId: string;
+  readonly companyId: string;
+  readonly roleId: string;
+  readonly status: AnswerStatus;
+  readonly answerMode: AnswerMode;
+  readonly responseText: string;
+  readonly citedClaimIds: readonly string[];
+  readonly citedSourceReferenceIds: readonly string[];
+  readonly citedApprovalDecisionIds: readonly string[];
+  readonly citedAuthorityBoundaryIds: readonly string[];
+  readonly eligibilityEvaluationId: string;
+  readonly createdAt: string;
+  readonly deliveredAt?: string;
+  readonly withheldReason?: AnswerEligibilityResult;
+  readonly correlationId: string;
+}
+
+export type EscalationReason =
+  | 'approval-required'
+  | 'mandatory-escalation'
+  | 'emergency'
+  | 'sensitive-context'
+  | 'authority-unclear'
+  | 'missing-knowledge'
+  | 'conflicting-knowledge'
+  | 'invalid-provenance'
+  | 'unsupported-request';
+
+export type EscalationStatus = 'open' | 'assigned' | 'resolved' | 'closed';
+
+export interface EscalationContextItem {
+  readonly label: string;
+  readonly value: string;
+}
+
+export interface Escalation {
+  readonly id: string;
+  readonly companyId: string;
+  readonly roleId: string;
+  readonly questionId: string;
+  readonly reason: EscalationReason;
+  readonly urgency: EscalationUrgency;
+  readonly destination: string;
+  readonly requiredContext: readonly EscalationContextItem[];
+  readonly status: EscalationStatus;
+  readonly createdAt: string;
+  readonly assignedAt?: string;
+  readonly assignedToLabel?: string;
+  readonly resolvedAt?: string;
+  readonly resolutionSummary?: string;
+  readonly resolvedByLabel?: string;
+  readonly relatedGapId?: string;
+  readonly matchingBoundaryIds: readonly string[];
+  readonly matchingEscalationRuleIds: readonly string[];
+  readonly correlationId: string;
+}
+
+export type ActivityEventType =
+  | 'question-received'
+  | 'question-evaluated'
+  | 'answer-delivered'
+  | 'answer-withheld'
+  | 'escalation-opened'
+  | 'escalation-assigned'
+  | 'escalation-resolved'
+  | 'escalation-closed'
+  | 'gap-linked-to-question';
+
+export type ActivityEntityType =
+  'employee-question' | 'answer-evaluation' | 'answer' | 'escalation' | 'knowledge-gap';
+
+export type ActivityMetadataValue = string | number | boolean;
+
+export interface ActivityEvent {
+  readonly id: string;
+  readonly companyId: string;
+  readonly roleId: string;
+  readonly eventType: ActivityEventType;
+  readonly entityType: ActivityEntityType;
+  readonly entityId: string;
+  readonly actorLabel: string;
+  readonly occurredAt: string;
+  readonly correlationId: string;
+  readonly metadata: Readonly<Record<string, ActivityMetadataValue>>;
+}
+
+export interface QuestionEvaluationOutcome {
+  readonly question: EmployeeQuestion;
+  readonly evaluation: AnswerEligibilityEvaluation;
+  readonly answer: Answer;
+  readonly escalation?: Escalation;
+  readonly gap?: KnowledgeGap;
+}
+
 export interface EmployeeVisibleKnowledge {
   readonly claim: KnowledgeClaim & { readonly lifecycleStatus: 'approved' };
   readonly sourceReferences: readonly SourceReference[];
@@ -414,6 +694,11 @@ export interface PhaseOneSnapshot {
   readonly knowledgeGaps: readonly KnowledgeGap[];
   readonly interviewQuestions: readonly InterviewQuestion[];
   readonly interviewAnswers: readonly InterviewAnswer[];
+  readonly employeeQuestions: readonly EmployeeQuestion[];
+  readonly answerEligibilityEvaluations: readonly AnswerEligibilityEvaluation[];
+  readonly answers: readonly Answer[];
+  readonly escalations: readonly Escalation[];
+  readonly activityEvents: readonly ActivityEvent[];
 }
 
 export const EMPTY_PHASE_ONE_SNAPSHOT: PhaseOneSnapshot = Object.freeze({
@@ -426,4 +711,9 @@ export const EMPTY_PHASE_ONE_SNAPSHOT: PhaseOneSnapshot = Object.freeze({
   knowledgeGaps: Object.freeze([]),
   interviewQuestions: Object.freeze([]),
   interviewAnswers: Object.freeze([]),
+  employeeQuestions: Object.freeze([]),
+  answerEligibilityEvaluations: Object.freeze([]),
+  answers: Object.freeze([]),
+  escalations: Object.freeze([]),
+  activityEvents: Object.freeze([]),
 });

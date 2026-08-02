@@ -3,6 +3,7 @@ export * from './coverage';
 export * from './employeeVisibility';
 export * from './operationalTopics';
 export * from './phaseOneService';
+export * from './questionPolicyFirewall';
 export * from './repositories';
 export * from './result';
 export * from './sourceDocuments';

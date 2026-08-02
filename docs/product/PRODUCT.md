@@ -9,7 +9,7 @@ The first supported role is **Home-Service Office Manager / Dispatcher**. RelayO
 ## People and outcomes
 
 - The **owner** supplies or confirms source material, resolves ambiguity, and approves or rejects proposed knowledge.
-- The **employee** will eventually ask operational questions, follow approved guidance, and escalate when guidance or authority is insufficient. Phase 2 still demonstrates only which approved current knowledge is eligible to be shown.
+- The **employee** submits structured operational questions, follows cited approved guidance when every deterministic gate passes, and receives an explicit prohibited, withheld, or escalation outcome when RelayOS cannot safely answer.
 - The **company** gains a traceable system that improves through real work without silently converting AI output into policy.
 
 A successful transfer means the employee can handle more of the defined role independently while the owner can inspect exactly what guidance was used, where it came from, and why an escalation occurred. Independence is measured from visible operational components, never a model-generated score.
@@ -18,25 +18,25 @@ A successful transfer means the employee can handle more of the defined role ind
 
 1. **Approved knowledge is the employee boundary.** Employee-visible answers use only owner-approved knowledge.
 2. **Provenance is part of the knowledge.** Sources, revisions, and append-only approval decisions remain traceable.
-3. **Uncertainty is a workflow.** Missing, conflicting, sensitive, or low-confidence evidence leads to escalation and a recorded gap.
+3. **Uncertainty is a workflow.** Missing, conflicting, provenance-invalid, sensitive, or unclear-authority conditions fail closed. A gap is recorded only for a genuine system deficiency, not merely because a known rule requires human action.
 4. **Generation proposes; owners decide.** Extracted claims, inferred content, and generated improvements remain visibly unapproved until reviewed.
 5. **Real work improves the system.** Questions and escalations reveal gaps that can become reviewable proposals.
 6. **Start narrow.** One company and the Home-Service Office Manager / Dispatcher role come before generalized multi-tenancy or arbitrary roles.
 
-## Future operating loop
+## Operating loop
 
 ```text
-employee question
--> retrieve approved company knowledge
--> answer or escalate
--> identify a knowledge gap
--> draft a proposed system improvement
--> owner reviews it
--> approved knowledge becomes available in the future
+structured employee question
+-> retrieve current approved company knowledge by explicit topic
+-> deterministic policy firewall
+-> cited answer OR prohibited / withheld / escalation outcome
+-> identify a genuine knowledge gap when the operating system is deficient
+-> owner resolves the operational escalation without creating policy
+-> source and review work may later produce approved knowledge
 ```
 
-This complete loop remains a future product target. Phase 2 implements its owner-side source-to-gap-to-proposal segment: one session-only company and role, immutable manual-paste source versions, exact anchors, explicit-topic coverage, deterministic interview questions, immutable owner answers, normal claim decisions/revisions, and an approved-only employee view. It does not accept employee questions or generate answers. See [V1 scope](V1_SCOPE.md) and the [Phase 2 execution plan](../exec-plans/phase-2-source-intake-interviewer.md).
+Phase 3 implements the first employee-question and owner-escalation segment in current-session memory. Topic, request type, sensitivity, and request context are explicit; question text is retained but never semantically searched or parsed. Answers use fixed templates and only current approved employee-visible claims with exact source and approval provenance. Known approval, escalation, emergency, sensitivity-handling, and prohibition rules do not manufacture gaps. Escalation resolution is not knowledge approval, and later source/interview/review work remains the only route to employee-visible policy. See [V1 scope](V1_SCOPE.md) and the [Phase 3 execution plan](../exec-plans/phase-3-question-to-system.md).
 
 ## Language and boundaries
 
-The canonical entity vocabulary is in the [domain model](../architecture/DOMAIN_MODEL.md). The rules for model use are in [AI boundaries](../architecture/AI_BOUNDARIES.md). Product journeys must preserve both; UI language must never imply that a generated proposal is approved company policy.
+The canonical entity vocabulary is in the [domain model](../architecture/DOMAIN_MODEL.md). The rules for model use are in [AI boundaries](../architecture/AI_BOUNDARIES.md). Product journeys must preserve both; UI language must never imply that an answer, escalation resolution, or generated proposal is approved company policy.

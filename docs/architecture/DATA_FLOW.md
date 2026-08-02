@@ -1,20 +1,20 @@
 # RelayOS data flow
 
-This document separates the Phase 2 implementation from planned V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); there is still no persistence, file-ingestion, employee-question, or model pipeline.
+This document separates the Phase 3 implementation from later V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); there is still no persistence, file-ingestion, model, semantic-retrieval, identity, or messaging pipeline.
 
-## Phase 2 session boundary
+## Phase 3 session boundary
 
 ```text
 browser request -> Cloudflare Pages static asset / SPA fallback
-                -> React Router -> Phase 2 route
+                -> React Router -> Phase 3 route
 
 one React context
   -> one in-memory repository for the page session
-  -> existing domain service validates every scoped write and lifecycle operation
+  -> existing domain service validates every Phase 0-3 scoped write and lifecycle operation
   -> defensive repository reads
 ```
 
-In-app navigation retains the same repository instance. Reloading or closing the page discards every record. There is no browser storage, external request, API, server, identity, model call, source upload, or durable event stream.
+In-app navigation retains the same repository instance. Reloading or closing the page discards every source, question, answer, escalation, gap, decision, and activity event. There is no browser storage, external request, API, server, identity, model call, source upload, messaging, or durable event stream.
 
 ## Phase 1 company-and-role flow
 
@@ -41,7 +41,7 @@ manual SourceReference metadata
   -> employee selector returns approved + current + nonsuperseded only
 ```
 
-The selector also verifies active company/role scope, resolvable sources, and decision provenance. Missing, conflicting, extracted, proposed, rejected, and superseded records remain owner-visible where useful but employee-invisible. Phase 1 stops at eligible knowledge display; it does not accept a question or create an answer.
+The selector also verifies active company/role scope, resolvable sources, and decision provenance. Missing, conflicting, extracted, proposed, rejected, and superseded records remain owner-visible where useful but employee-invisible. Phase 3 reuses this unchanged selector as the first retrieval boundary.
 
 The fixed Summit Comfort Heating & Air fixture passes through the same repository and domain policies. Its stable IDs make repeated loading in one session idempotent.
 
@@ -80,18 +80,44 @@ canonical topic catalog + explicit claim.topicKey
 
 Coverage does not compare free text. A conflict must already be explicit through claim lifecycle data. Question follow-ups depend only on typed values and checked-in rules. Gap status never controls employee visibility; the Phase 1 claim selector remains the read boundary.
 
-## Future employee question flow (not Phase 2)
+## Phase 3 employee question and policy-firewall flow
 
-1. Store the `EmployeeQuestion` in company and role scope.
-2. Retrieve candidate knowledge with a hard approved/current/scope filter.
-3. Evaluate provenance completeness, evidence conflicts, sensitivity, configured confidence threshold, authority boundaries, and escalation rules.
-4. If every check passes, create an `Answer` grounded only in the eligible approved revisions, with citations and a generated/non-policy label where applicable.
-5. If any check fails, withhold the answer and create an `Escalation` plus a categorized `KnowledgeGap`.
-6. Append `ActivityEvent` records that connect the question, evidence set, decision path, and outcome without leaking sensitive content into logs.
+```text
+explicit topic + request type + sensitivity + typed context + question text
+  -> validate active scope and discriminated context
+  -> append immutable EmployeeQuestion and question-received event
+  -> retrieve current employee-visible approved claims by explicit topic
+  -> validate exact sources and exact-version approval decisions
+  -> scan explicit same-topic conflict records
+  -> evaluate selected sensitivity
+  -> match explicit structured authority boundaries
+  -> match explicit structured escalation rules
+  -> verify supported answer mode
+  -> append immutable AnswerEligibilityEvaluation
+  -> append fixed-template cited Answer OR prohibited / withheld / escalated Answer
+  -> create or reuse one open Escalation when human action is required
+  -> create or reuse and link a KnowledgeGap only for a genuine deficiency
+  -> append safe correlated ActivityEvents
+```
 
-Retrieval is fail-closed: filtering after generation is insufficient because unapproved material must not enter the answer context.
+All ten gate records are persisted in fixed order even when an earlier safety condition controls the result. Outcome precedence is invalid scope/topic/context; employee-selected sensitivity; explicit prohibition; mandatory escalation/approval; missing/conflicting/invalid knowledge; unclear structured authority; then eligible answer. Question and source wording is never searched, compared, or parsed for topic, sensitivity, policy, conflicts, limits, authority, or routing. Numeric limits and currencies are typed values.
 
-## Future employee-signal gap-to-improvement flow (not Phase 2)
+Retrieval is fail-closed and happens before composition. Only an eligible result enters fixed templates, every substantive statement cites the admitted claims/sources/decisions, and informational guidance explicitly grants no action authority. A matching prohibited boundary grounds a prohibited result. Known approval, escalation, emergency, or sensitivity-handling rules open or reuse an escalation without a fake gap. Missing/conflicting/invalid knowledge, unsupported absent policy/procedure, or absent structured authority can create/reuse and link a genuine topic gap.
+
+Re-entering evaluation for the same evaluated question returns the existing immutable records and appends nothing. Corrections create a new linked question.
+
+## Phase 3 owner escalation flow
+
+```text
+open Escalation
+  -> optional assignment label + escalation-assigned event
+  -> resolution summary + resolved actor + escalation-resolved event
+  -> close only after resolution + escalation-closed event
+```
+
+Destination comes only from a matching structured boundary/rule or an explicitly configured owner fallback. Required context comes from typed fields and is minimized; raw sensitive question text is not copied into events or routing metadata. Resolution does not create or approve a claim, mutate approval history, edit the question/answer, or resolve/dismiss a related gap. Approved-knowledge reconciliation resolves a question-linked gap only after the gates relevant to its original deficiency pass; another same-topic claim cannot erase a continuing conflict, provenance, unsupported-mode, or authority problem. If a resolution should become reusable guidance, the owner starts the existing source/interview/review flow.
+
+## Future employee-signal gap-to-improvement flow (not Phase 3)
 
 ```text
 Question / Escalation / ScenarioAttempt
@@ -105,7 +131,7 @@ Question / Escalation / ScenarioAttempt
 
 Resolving or closing an escalation does not approve knowledge. Approving a proposal does not mutate its provenance; publication produces or activates a distinct knowledge revision after all source and approval requirements pass.
 
-## Future training and measurement flow (not Phase 2)
+## Future training and measurement flow (not Phase 3)
 
 Only approved knowledge can support an employee-visible `TrainingScenario`. A `ScenarioAttempt` retains the exact scenario and rubric revision. Deterministic evaluation components may feed an `IndependenceMetric` together with approved responsibility coverage and appropriate-escalation events. Each metric snapshot stores its formula version and linked inputs; no model produces the score.
 
@@ -115,6 +141,7 @@ Only approved knowledge can support an employee-visible `TrainingScenario`. A `S
 - Domain policies decide visibility, escalation, and publication.
 - A later server layer must authorize every read/write and mediate the future `ModelGateway`.
 - Approval decisions and meaningful activity events append; corrections create new records or revisions.
+- Phase 3 activity metadata is safe traceability data, not policy evidence or analytics, and excludes raw sensitive question/source content.
 - Source documents may be superseded or withdrawn, but historical locators and decisions remain addressable according to retention policy.
 - Demo adapters use fixed local data and the same domain gates, never production credentials.
 

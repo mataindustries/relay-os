@@ -8,6 +8,7 @@ import {
   type ApprovedClaimRevisionInput,
   type ClaimDecisionInput,
   type DomainResult,
+  type EmployeeQuestionInput,
   type InterviewAnswerInput,
   type KnowledgeClaimInput,
   type KnowledgeClaimUpdates,
@@ -34,7 +35,11 @@ export function RelaySessionProvider({
   service: suppliedService,
 }: RelaySessionProviderProps) {
   const [service] = useState(
-    () => suppliedService ?? new PhaseOneService(new InMemoryPhaseOneRepository()),
+    () =>
+      suppliedService ??
+      new PhaseOneService(new InMemoryPhaseOneRepository(), {
+        ownerFallbackDestination: 'Owner',
+      }),
   );
   const [snapshot, setSnapshot] = useState(() => service.getSnapshot());
   const [setupDraft, setSetupDraft] = useState(createInitialSetupDraft);
@@ -183,6 +188,28 @@ export function RelaySessionProvider({
     (input: InterviewAnswerInput) => perform(() => service.submitInterviewAnswer(input)),
     [perform, service],
   );
+  const submitEmployeeQuestion = useCallback(
+    (input: EmployeeQuestionInput) => perform(() => service.submitEmployeeQuestion(input)),
+    [perform, service],
+  );
+  const evaluateEmployeeQuestion = useCallback(
+    (questionId: string) => perform(() => service.evaluateEmployeeQuestion(questionId)),
+    [perform, service],
+  );
+  const assignEscalation = useCallback(
+    (escalationId: string, assignedToLabel: string) =>
+      perform(() => service.assignEscalation(escalationId, assignedToLabel)),
+    [perform, service],
+  );
+  const resolveEscalation = useCallback(
+    (escalationId: string, resolutionSummary: string, resolvedByLabel: string) =>
+      perform(() => service.resolveEscalation(escalationId, resolutionSummary, resolvedByLabel)),
+    [perform, service],
+  );
+  const closeEscalation = useCallback(
+    (escalationId: string) => perform(() => service.closeEscalation(escalationId)),
+    [perform, service],
+  );
 
   const value = useMemo<RelaySessionValue>(
     () => ({
@@ -214,6 +241,11 @@ export function RelaySessionProvider({
       generateInterviewQuestions,
       skipInterviewQuestion,
       submitInterviewAnswer,
+      submitEmployeeQuestion,
+      evaluateEmployeeQuestion,
+      assignEscalation,
+      resolveEscalation,
+      closeEscalation,
     }),
     [
       approveKnowledgeClaim,
@@ -233,6 +265,11 @@ export function RelaySessionProvider({
       skipInterviewQuestion,
       snapshot,
       submitInterviewAnswer,
+      submitEmployeeQuestion,
+      evaluateEmployeeQuestion,
+      assignEscalation,
+      resolveEscalation,
+      closeEscalation,
       updateKnowledgeClaim,
       transitionKnowledgeClaim,
       updateSourceDocumentDraft,

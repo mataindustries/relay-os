@@ -1,6 +1,11 @@
 import {
   EMPTY_PHASE_ONE_SNAPSHOT,
   type ActivateSetupInput,
+  type ActivityEvent,
+  type ActivityEventType,
+  type Answer,
+  type AnswerEligibilityGateKey,
+  type AnswerEligibilityEvaluation,
   type AnchoredSourceReferenceInput,
   type ApprovalDecision,
   type ApprovedClaimRevisionInput,
@@ -8,6 +13,10 @@ import {
   type ClaimDecisionInput,
   type Company,
   type EmployeeVisibleKnowledge,
+  type EmployeeQuestion,
+  type EmployeeQuestionInput,
+  type Escalation,
+  type EscalationContextItem,
   type EscalationRule,
   type InterviewAnswer,
   type InterviewAnswerInput,
@@ -22,6 +31,7 @@ import {
   type ManualExtractedClaimInput,
   type OperationalQuestionTemplate,
   type PhaseOneSnapshot,
+  type QuestionEvaluationOutcome,
   type Responsibility,
   type Role,
   type SourceDocument,
@@ -30,6 +40,7 @@ import {
   type SourceDocumentUpdates,
   type SourceReference,
   type SourceReferenceInput,
+  type StructuredQuestionContext,
 } from './entities';
 import { evaluateTopicCoverage } from './coverage';
 import { selectEmployeeVisibleKnowledge } from './employeeVisibility';
@@ -41,6 +52,11 @@ import {
   structuredValuesMatch,
 } from './operationalTopics';
 import type { PhaseOneRepository } from './repositories';
+import {
+  evaluateQuestionPolicy,
+  validateEmployeeQuestionInput,
+  type PolicyFirewallDecision,
+} from './questionPolicyFirewall';
 import { domainFailure, domainSuccess, type DomainResult } from './result';
 import {
   excerptSourceLines,
@@ -62,6 +78,7 @@ export { selectEmployeeVisibleKnowledge } from './employeeVisibility';
 export interface PhaseOneServiceOptions {
   readonly clock?: () => string;
   readonly idFactory?: (prefix: string) => string;
+  readonly ownerFallbackDestination?: string;
 }
 
 const NON_DECISION_TRANSITIONS: Readonly<
@@ -89,6 +106,39 @@ const ACTIVE_GAP_STATUSES: readonly KnowledgeGapStatus[] = [
   'answered',
   'proposal-created',
 ];
+
+const QUESTION_GAP_REMEDIATION_GATES: Readonly<
+  Record<KnowledgeGapReason, readonly AnswerEligibilityGateKey[]>
+> = {
+  'missing-evidence': [
+    'current-approved-knowledge-present',
+    'provenance-valid',
+    'no-explicit-conflict',
+  ],
+  'conflicting-evidence': [
+    'current-approved-knowledge-present',
+    'provenance-valid',
+    'no-explicit-conflict',
+  ],
+  'invalid-provenance': [
+    'current-approved-knowledge-present',
+    'provenance-valid',
+    'no-explicit-conflict',
+  ],
+  'authority-unclear': [
+    'current-approved-knowledge-present',
+    'provenance-valid',
+    'no-explicit-conflict',
+    'authority-clear',
+  ],
+  'unsupported-request': [
+    'current-approved-knowledge-present',
+    'provenance-valid',
+    'no-explicit-conflict',
+    'answer-mode-supported',
+  ],
+  'incomplete-evidence': [],
+};
 
 const GAP_TRANSITIONS: Readonly<Record<KnowledgeGapStatus, readonly KnowledgeGapStatus[]>> = {
   open: ['question-ready', 'dismissed', 'resolved'],
@@ -118,6 +168,7 @@ function isEmptySnapshot(snapshot: PhaseOneSnapshot): boolean {
 export class PhaseOneService {
   private readonly clock: () => string;
   private readonly idFactory: (prefix: string) => string;
+  private readonly ownerFallbackDestination?: string;
 
   constructor(
     private readonly repository: PhaseOneRepository,
@@ -126,6 +177,9 @@ export class PhaseOneService {
     let sequence = 0;
     this.clock = options.clock ?? (() => new Date().toISOString());
     this.idFactory = options.idFactory ?? ((prefix) => `${prefix}-${++sequence}`);
+    if (options.ownerFallbackDestination !== undefined) {
+      this.ownerFallbackDestination = clean(options.ownerFallbackDestination);
+    }
   }
 
   getSnapshot(): PhaseOneSnapshot {
@@ -199,6 +253,15 @@ export class PhaseOneService {
         limitOrConstraint: clean(boundary.limitOrConstraint),
         escalationDestination: clean(boundary.escalationDestination),
         notes: clean(boundary.notes),
+        ...(boundary.topicKeys === undefined ? {} : { topicKeys: [...boundary.topicKeys] }),
+        ...(boundary.applicableRequestTypes === undefined
+          ? {}
+          : { applicableRequestTypes: [...boundary.applicableRequestTypes] }),
+        ...(boundary.numericLimit === undefined ? {} : { numericLimit: boundary.numericLimit }),
+        ...(boundary.currency === undefined ? {} : { currency: boundary.currency }),
+        ...(boundary.structuredConstraintType === undefined
+          ? {}
+          : { structuredConstraintType: boundary.structuredConstraintType }),
       }),
     );
     const escalationRules: readonly EscalationRule[] = input.role.escalationRules.map((rule) => ({
@@ -209,6 +272,14 @@ export class PhaseOneService {
       urgency: rule.urgency,
       requiredContext: clean(rule.requiredContext),
       expectedResponse: clean(rule.expectedResponse),
+      ...(rule.topicKeys === undefined ? {} : { topicKeys: [...rule.topicKeys] }),
+      ...(rule.applicableRequestTypes === undefined
+        ? {}
+        : { applicableRequestTypes: [...rule.applicableRequestTypes] }),
+      ...(rule.urgencyMatch === undefined ? {} : { urgencyMatch: rule.urgencyMatch }),
+      ...(rule.sensitivityCategories === undefined
+        ? {}
+        : { sensitivityCategories: [...rule.sensitivityCategories] }),
     }));
     const role: Role = {
       id: roleId,
@@ -1031,12 +1102,722 @@ export class PhaseOneService {
     return this.commitWithOptionalReconciliation(next, answer);
   }
 
+  submitEmployeeQuestion(input: EmployeeQuestionInput): DomainResult<EmployeeQuestion> {
+    const scope = this.requireActiveScope();
+    if (!scope.ok) return scope;
+    const validation = validateEmployeeQuestionInput(input);
+    if (!validation.ok) return validation;
+
+    if (input.correctsQuestionId !== undefined) {
+      const corrected = scope.value.employeeQuestions.find(
+        ({ id }) => id === input.correctsQuestionId,
+      );
+      if (corrected === undefined) {
+        return domainFailure(
+          'employee-question-not-found',
+          'The question being corrected was not found.',
+        );
+      }
+      if (
+        corrected.companyId !== scope.value.company.id ||
+        corrected.roleId !== scope.value.role.id
+      ) {
+        return domainFailure(
+          'relationship-mismatch',
+          'A correction must reference a question in the active company and role.',
+        );
+      }
+      if (corrected.status === 'received' || corrected.status === 'evaluating') {
+        return domainFailure(
+          'invalid-transition',
+          'A received question must be evaluated before a correction is submitted.',
+        );
+      }
+    }
+
+    const timestamp = this.clock();
+    const question: EmployeeQuestion = {
+      id: this.idFactory('employee-question'),
+      companyId: scope.value.company.id,
+      roleId: scope.value.role.id,
+      employeeLabel: clean(input.employeeLabel),
+      questionText: input.questionText,
+      topicKey: input.topicKey,
+      requestType: input.requestType,
+      sensitivitySelection: input.sensitivitySelection,
+      structuredContext: this.normalizeQuestionContext(input.structuredContext),
+      status: 'received',
+      submittedAt: timestamp,
+      ...(input.correctsQuestionId === undefined
+        ? {}
+        : { correctsQuestionId: input.correctsQuestionId }),
+      correlationId: this.idFactory('correlation'),
+    };
+    const event = this.createActivityEvent(
+      scope.value,
+      'question-received',
+      'employee-question',
+      question.id,
+      question.employeeLabel,
+      question.correlationId,
+      {
+        topicKey: question.topicKey,
+        requestType: question.requestType,
+        sensitivitySelection: question.sensitivitySelection,
+      },
+      timestamp,
+    );
+    return this.commit(
+      {
+        ...scope.value,
+        employeeQuestions: [...scope.value.employeeQuestions, question],
+        activityEvents: [...scope.value.activityEvents, event],
+      },
+      question,
+    );
+  }
+
+  correctEmployeeQuestion(
+    questionId: string,
+    input: EmployeeQuestionInput,
+  ): DomainResult<EmployeeQuestion> {
+    const scope = this.requireActiveScope();
+    if (!scope.ok) return scope;
+    const question = scope.value.employeeQuestions.find(({ id }) => id === questionId);
+    if (question === undefined) {
+      return domainFailure('employee-question-not-found', 'Employee question was not found.');
+    }
+    return this.submitEmployeeQuestion({
+      ...input,
+      correctsQuestionId: question.id,
+    });
+  }
+
+  evaluateEmployeeQuestion(questionId: string): DomainResult<QuestionEvaluationOutcome> {
+    const scope = this.requireActiveScope();
+    if (!scope.ok) return scope;
+    const question = scope.value.employeeQuestions.find(({ id }) => id === questionId);
+    if (question === undefined) {
+      return domainFailure('employee-question-not-found', 'Employee question was not found.');
+    }
+
+    const existingEvaluation = scope.value.answerEligibilityEvaluations.find(
+      (evaluation) => evaluation.questionId === question.id,
+    );
+    if (existingEvaluation !== undefined) {
+      return this.existingQuestionOutcome(scope.value, question, existingEvaluation);
+    }
+    if (question.status !== 'received') {
+      return domainFailure(
+        'invalid-transition',
+        `Cannot evaluate a question in ${question.status} status.`,
+      );
+    }
+
+    const evaluatedAt = this.clock();
+    const evaluatingQuestion: EmployeeQuestion = { ...question, status: 'evaluating' };
+    const evaluationId = this.idFactory('eligibility-evaluation');
+    const policy = evaluateQuestionPolicy(
+      {
+        ...scope.value,
+        employeeQuestions: scope.value.employeeQuestions.map((candidate) =>
+          candidate.id === question.id ? evaluatingQuestion : candidate,
+        ),
+      },
+      evaluatingQuestion,
+      evaluationId,
+      evaluatedAt,
+    );
+
+    let next: PhaseOneSnapshot = {
+      ...scope.value,
+      answerEligibilityEvaluations: [
+        ...scope.value.answerEligibilityEvaluations,
+        policy.evaluation,
+      ],
+    };
+    let gap: KnowledgeGap | undefined;
+    if (policy.gapReason !== undefined) {
+      const linked = this.linkQuestionGap(
+        next,
+        question,
+        policy.evaluation,
+        policy.gapReason,
+        evaluatedAt,
+      );
+      next = linked.snapshot;
+      gap = linked.gap;
+    }
+
+    const destination =
+      policy.escalationReason === undefined ? undefined : this.escalationDestination(policy);
+    let escalation: Escalation | undefined;
+    if (policy.escalationReason !== undefined && destination !== undefined) {
+      escalation = {
+        id: this.idFactory('question-escalation'),
+        companyId: question.companyId,
+        roleId: question.roleId,
+        questionId: question.id,
+        reason: policy.escalationReason,
+        urgency: policy.escalationUrgency ?? 'same-day',
+        destination,
+        requiredContext: this.escalationContext(question, policy.matchingRules[0]),
+        status: 'open',
+        createdAt: evaluatedAt,
+        ...(gap === undefined ? {} : { relatedGapId: gap.id }),
+        matchingBoundaryIds: policy.evaluation.matchingAuthorityBoundaryIds,
+        matchingEscalationRuleIds: policy.evaluation.matchingEscalationRuleIds,
+        correlationId: question.correlationId,
+      };
+      next = { ...next, escalations: [...next.escalations, escalation] };
+    }
+
+    const actualAnswerStatus: Answer['status'] =
+      policy.answerStatus === 'escalated' && escalation === undefined
+        ? 'withheld'
+        : policy.answerStatus;
+    const actualAnswerMode: Answer['answerMode'] =
+      policy.answerStatus === 'escalated' && escalation === undefined
+        ? 'withheld'
+        : policy.answerMode;
+    const answer: Answer = {
+      id: this.idFactory('question-answer'),
+      questionId: question.id,
+      companyId: question.companyId,
+      roleId: question.roleId,
+      status: actualAnswerStatus,
+      answerMode: actualAnswerMode,
+      responseText: policy.responseText,
+      citedClaimIds: actualAnswerStatus === 'delivered' ? policy.evaluation.eligibleClaimIds : [],
+      citedSourceReferenceIds:
+        actualAnswerStatus === 'delivered' ? policy.evaluation.eligibleSourceReferenceIds : [],
+      citedApprovalDecisionIds:
+        actualAnswerStatus === 'delivered' ? policy.evaluation.approvalDecisionIds : [],
+      citedAuthorityBoundaryIds:
+        actualAnswerStatus === 'delivered' ||
+        actualAnswerStatus === 'prohibited' ||
+        actualAnswerStatus === 'escalated'
+          ? policy.evaluation.matchingAuthorityBoundaryIds
+          : [],
+      eligibilityEvaluationId: policy.evaluation.id,
+      createdAt: evaluatedAt,
+      ...(actualAnswerStatus === 'delivered' ? { deliveredAt: evaluatedAt } : {}),
+      ...(policy.evaluation.withholdReason === undefined
+        ? {}
+        : { withheldReason: policy.evaluation.withholdReason }),
+      correlationId: question.correlationId,
+    };
+    const finalQuestion: EmployeeQuestion = {
+      ...question,
+      status:
+        actualAnswerStatus === 'delivered'
+          ? 'answered'
+          : actualAnswerStatus === 'escalated'
+            ? 'escalated'
+            : 'withheld',
+    };
+    const evaluationEvent = this.createActivityEvent(
+      next,
+      'question-evaluated',
+      'answer-evaluation',
+      policy.evaluation.id,
+      'RelayOS deterministic policy firewall',
+      question.correlationId,
+      { overallResult: policy.evaluation.overallResult },
+      evaluatedAt,
+    );
+    const answerEvent = this.createActivityEvent(
+      next,
+      actualAnswerStatus === 'delivered' ? 'answer-delivered' : 'answer-withheld',
+      'answer',
+      answer.id,
+      'RelayOS deterministic policy firewall',
+      question.correlationId,
+      { status: actualAnswerStatus, answerMode: actualAnswerMode },
+      evaluatedAt,
+    );
+    const gapEvent =
+      gap === undefined
+        ? undefined
+        : this.createActivityEvent(
+            next,
+            'gap-linked-to-question',
+            'knowledge-gap',
+            gap.id,
+            'RelayOS deterministic policy firewall',
+            question.correlationId,
+            { topicKey: question.topicKey, reason: gap.reason },
+            evaluatedAt,
+          );
+    const escalationEvent =
+      escalation === undefined
+        ? undefined
+        : this.createActivityEvent(
+            next,
+            'escalation-opened',
+            'escalation',
+            escalation.id,
+            'RelayOS deterministic policy firewall',
+            question.correlationId,
+            { reason: escalation.reason, urgency: escalation.urgency },
+            evaluatedAt,
+          );
+    const activityEvents = [
+      ...next.activityEvents,
+      evaluationEvent,
+      answerEvent,
+      ...(gapEvent === undefined ? [] : [gapEvent]),
+      ...(escalationEvent === undefined ? [] : [escalationEvent]),
+    ];
+    next = {
+      ...next,
+      employeeQuestions: next.employeeQuestions.map((candidate) =>
+        candidate.id === finalQuestion.id ? finalQuestion : candidate,
+      ),
+      answers: [...next.answers, answer],
+      activityEvents,
+    };
+    const committed = this.commit(next);
+    if (!committed.ok) return committed;
+    return domainSuccess({
+      question: finalQuestion,
+      evaluation: policy.evaluation,
+      answer,
+      ...(escalation === undefined ? {} : { escalation }),
+      ...(gap === undefined ? {} : { gap }),
+    });
+  }
+
+  closeEmployeeQuestion(questionId: string): DomainResult<EmployeeQuestion> {
+    const scope = this.requireActiveScope();
+    if (!scope.ok) return scope;
+    const question = scope.value.employeeQuestions.find(({ id }) => id === questionId);
+    if (question === undefined) {
+      return domainFailure('employee-question-not-found', 'Employee question was not found.');
+    }
+    if (question.status === 'received' || question.status === 'evaluating') {
+      return domainFailure(
+        'invalid-transition',
+        'A question can close only after a deterministic outcome exists.',
+      );
+    }
+    if (question.status === 'closed') {
+      return domainFailure('immutable-question', 'A closed question is immutable.');
+    }
+    const closed: EmployeeQuestion = {
+      ...question,
+      status: 'closed',
+      closedAt: this.clock(),
+    };
+    return this.commit(
+      {
+        ...scope.value,
+        employeeQuestions: scope.value.employeeQuestions.map((candidate) =>
+          candidate.id === closed.id ? closed : candidate,
+        ),
+      },
+      closed,
+    );
+  }
+
+  assignEscalation(escalationId: string, assignedToLabel: string): DomainResult<Escalation> {
+    const scope = this.requireActiveScope();
+    if (!scope.ok) return scope;
+    const escalation = scope.value.escalations.find(({ id }) => id === escalationId);
+    if (escalation === undefined) {
+      return domainFailure('escalation-not-found', 'Escalation was not found.');
+    }
+    if (escalation.status !== 'open') {
+      return domainFailure('invalid-transition', 'Only an open escalation can be assigned.');
+    }
+    if (clean(assignedToLabel).length === 0) {
+      return domainFailure('validation-error', 'Assignment label is required.', 'assignedToLabel');
+    }
+    const timestamp = this.clock();
+    const assignee = clean(assignedToLabel);
+    const assigned: Escalation = {
+      ...escalation,
+      status: 'assigned',
+      assignedAt: timestamp,
+      assignedToLabel: assignee,
+    };
+    const event = this.createActivityEvent(
+      scope.value,
+      'escalation-assigned',
+      'escalation',
+      assigned.id,
+      assignee,
+      assigned.correlationId,
+      { status: assigned.status },
+      timestamp,
+    );
+    return this.commit(
+      {
+        ...scope.value,
+        escalations: scope.value.escalations.map((candidate) =>
+          candidate.id === assigned.id ? assigned : candidate,
+        ),
+        activityEvents: [...scope.value.activityEvents, event],
+      },
+      assigned,
+    );
+  }
+
+  resolveEscalation(
+    escalationId: string,
+    resolutionSummary: string,
+    resolvedByLabel: string,
+  ): DomainResult<Escalation> {
+    const scope = this.requireActiveScope();
+    if (!scope.ok) return scope;
+    const escalation = scope.value.escalations.find(({ id }) => id === escalationId);
+    if (escalation === undefined) {
+      return domainFailure('escalation-not-found', 'Escalation was not found.');
+    }
+    if (escalation.status !== 'open' && escalation.status !== 'assigned') {
+      return domainFailure(
+        'invalid-transition',
+        'Only an open or assigned escalation can be resolved.',
+      );
+    }
+    if (clean(resolutionSummary).length === 0 || clean(resolvedByLabel).length === 0) {
+      return domainFailure(
+        'validation-error',
+        'Resolution summary and resolver label are required.',
+        clean(resolutionSummary).length === 0 ? 'resolutionSummary' : 'resolvedByLabel',
+      );
+    }
+    const timestamp = this.clock();
+    const resolver = clean(resolvedByLabel);
+    const resolved: Escalation = {
+      ...escalation,
+      status: 'resolved',
+      resolvedAt: timestamp,
+      resolutionSummary: clean(resolutionSummary),
+      resolvedByLabel: resolver,
+    };
+    const event = this.createActivityEvent(
+      scope.value,
+      'escalation-resolved',
+      'escalation',
+      resolved.id,
+      resolver,
+      resolved.correlationId,
+      { status: resolved.status },
+      timestamp,
+    );
+    return this.commit(
+      {
+        ...scope.value,
+        escalations: scope.value.escalations.map((candidate) =>
+          candidate.id === resolved.id ? resolved : candidate,
+        ),
+        activityEvents: [...scope.value.activityEvents, event],
+      },
+      resolved,
+    );
+  }
+
+  closeEscalation(escalationId: string): DomainResult<Escalation> {
+    const scope = this.requireActiveScope();
+    if (!scope.ok) return scope;
+    const escalation = scope.value.escalations.find(({ id }) => id === escalationId);
+    if (escalation === undefined) {
+      return domainFailure('escalation-not-found', 'Escalation was not found.');
+    }
+    if (escalation.status !== 'resolved') {
+      return domainFailure('invalid-transition', 'Only a resolved escalation can be closed.');
+    }
+    const closed: Escalation = { ...escalation, status: 'closed' };
+    const timestamp = this.clock();
+    const event = this.createActivityEvent(
+      scope.value,
+      'escalation-closed',
+      'escalation',
+      closed.id,
+      closed.resolvedByLabel ?? closed.assignedToLabel ?? 'Owner',
+      closed.correlationId,
+      { status: closed.status },
+      timestamp,
+    );
+    return this.commit(
+      {
+        ...scope.value,
+        escalations: scope.value.escalations.map((candidate) =>
+          candidate.id === closed.id ? closed : candidate,
+        ),
+        activityEvents: [...scope.value.activityEvents, event],
+      },
+      closed,
+    );
+  }
+
   prioritizedInterviewQuestions(): readonly InterviewQuestion[] {
     return this.prioritizedQuestions(this.getSnapshot().interviewQuestions);
   }
 
   selectEmployeeVisibleKnowledge(): readonly EmployeeVisibleKnowledge[] {
     return selectEmployeeVisibleKnowledge(this.getSnapshot());
+  }
+
+  private normalizeQuestionContext(context: StructuredQuestionContext): StructuredQuestionContext {
+    switch (context.requestType) {
+      case 'policy-lookup':
+        return { ...context };
+      case 'procedure-lookup':
+        return { ...context };
+      case 'decision-request':
+        return { ...context };
+      case 'exception-request':
+        return { ...context };
+      case 'financial-action':
+        return { ...context };
+      case 'emergency-action':
+        return { ...context };
+      case 'customer-commitment':
+        return { ...context };
+    }
+  }
+
+  private existingQuestionOutcome(
+    snapshot: PhaseOneSnapshot,
+    question: EmployeeQuestion,
+    evaluation: AnswerEligibilityEvaluation,
+  ): DomainResult<QuestionEvaluationOutcome> {
+    const answer = snapshot.answers.find(
+      (candidate) => candidate.eligibilityEvaluationId === evaluation.id,
+    );
+    if (answer === undefined) {
+      return domainFailure(
+        'answer-not-found',
+        'The immutable answer for this evaluation was not found.',
+      );
+    }
+    const escalation = snapshot.escalations.find(
+      (candidate) => candidate.questionId === question.id,
+    );
+    const gap =
+      escalation?.relatedGapId === undefined
+        ? snapshot.knowledgeGaps.find((candidate) =>
+            candidate.triggeringQuestionIds?.includes(question.id),
+          )
+        : snapshot.knowledgeGaps.find(({ id }) => id === escalation.relatedGapId);
+    return domainSuccess({
+      question,
+      evaluation,
+      answer,
+      ...(escalation === undefined ? {} : { escalation }),
+      ...(gap === undefined ? {} : { gap }),
+    });
+  }
+
+  private linkQuestionGap(
+    snapshot: PhaseOneSnapshot,
+    question: EmployeeQuestion,
+    evaluation: AnswerEligibilityEvaluation,
+    reason: KnowledgeGapReason,
+    timestamp: string,
+  ): { readonly snapshot: PhaseOneSnapshot; readonly gap: KnowledgeGap } {
+    const topic = getOperationalTopic(question.topicKey);
+    const activeGap = snapshot.knowledgeGaps.find(
+      (candidate) =>
+        candidate.companyId === question.companyId &&
+        candidate.roleId === question.roleId &&
+        candidate.topicKey === question.topicKey &&
+        ACTIVE_GAP_STATUSES.includes(candidate.status),
+    );
+    if (activeGap !== undefined) {
+      const linked: KnowledgeGap = {
+        ...activeGap,
+        originalReason: activeGap.originalReason ?? activeGap.reason,
+        triggeringQuestionIds: unique([...(activeGap.triggeringQuestionIds ?? []), question.id]),
+        eligibilityEvaluationIds: unique([
+          ...(activeGap.eligibilityEvaluationIds ?? []),
+          evaluation.id,
+        ]),
+        updatedAt: timestamp,
+      };
+      return {
+        snapshot: {
+          ...snapshot,
+          knowledgeGaps: snapshot.knowledgeGaps.map((candidate) =>
+            candidate.id === linked.id ? linked : candidate,
+          ),
+        },
+        gap: linked,
+      };
+    }
+
+    const gap: KnowledgeGap = {
+      id: this.idFactory('gap'),
+      companyId: question.companyId,
+      roleId: question.roleId,
+      topicKey: question.topicKey,
+      reason,
+      description: this.questionGapDescription(topic.label, reason),
+      impact: topic.whyItMatters,
+      riskTier: topic.riskTier,
+      status: 'open',
+      supportingSourceReferenceIds: evaluation.eligibleSourceReferenceIds,
+      relatedClaimIds: evaluation.eligibleClaimIds,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      originalReason: reason,
+      triggeringQuestionIds: [question.id],
+      eligibilityEvaluationIds: [evaluation.id],
+    };
+    return {
+      snapshot: { ...snapshot, knowledgeGaps: [...snapshot.knowledgeGaps, gap] },
+      gap,
+    };
+  }
+
+  private questionGapDescription(topicLabel: string, reason: KnowledgeGapReason): string {
+    switch (reason) {
+      case 'missing-evidence':
+        return `${topicLabel} has no current approved knowledge for the employee request.`;
+      case 'conflicting-evidence':
+        return `${topicLabel} has explicit conflicting knowledge that blocks the employee request.`;
+      case 'invalid-provenance':
+        return `${topicLabel} has current guidance with invalid source or approval provenance.`;
+      case 'authority-unclear':
+        return `${topicLabel} lacks a compatible structured authority boundary for the employee request.`;
+      case 'unsupported-request':
+        return `${topicLabel} lacks approved policy or procedure for the selected request mode.`;
+      case 'incomplete-evidence':
+        return `${topicLabel} has incomplete evidence for the employee request.`;
+    }
+  }
+
+  private escalationDestination(policy: PolicyFirewallDecision): string | undefined {
+    const ruleDestination = policy.matchingRules.find(
+      ({ destination }) => clean(destination).length > 0,
+    )?.destination;
+    if (ruleDestination !== undefined) return clean(ruleDestination);
+    const boundaryDestination = policy.matchingBoundaries.find(
+      ({ escalationDestination }) => clean(escalationDestination).length > 0,
+    )?.escalationDestination;
+    if (boundaryDestination !== undefined) return clean(boundaryDestination);
+    return this.ownerFallbackDestination === undefined || this.ownerFallbackDestination.length === 0
+      ? undefined
+      : this.ownerFallbackDestination;
+  }
+
+  private escalationContext(
+    question: EmployeeQuestion,
+    rule: EscalationRule | undefined,
+  ): readonly EscalationContextItem[] {
+    const base: EscalationContextItem[] = [
+      { label: 'Operational topic', value: question.topicKey },
+      { label: 'Request type', value: question.requestType },
+      { label: 'Sensitivity selection', value: question.sensitivitySelection },
+    ];
+    if (question.sensitivitySelection !== 'none') {
+      return rule === undefined
+        ? base
+        : [...base, { label: 'Required by matching rule', value: rule.requiredContext }];
+    }
+
+    switch (question.structuredContext.requestType) {
+      case 'policy-lookup':
+        break;
+      case 'procedure-lookup':
+        if (question.structuredContext.currentStepLabel !== undefined) {
+          base.push({
+            label: 'Current step',
+            value: question.structuredContext.currentStepLabel,
+          });
+        }
+        break;
+      case 'decision-request':
+        base.push({
+          label: 'Proposed action',
+          value: question.structuredContext.proposedAction,
+        });
+        if (question.structuredContext.subject !== undefined) {
+          base.push({ label: 'Subject', value: question.structuredContext.subject });
+        }
+        break;
+      case 'exception-request':
+        base.push(
+          {
+            label: 'Requested exception',
+            value: question.structuredContext.requestedException,
+          },
+          { label: 'Reason', value: question.structuredContext.reason },
+        );
+        break;
+      case 'financial-action':
+        base.push(
+          { label: 'Financial action', value: question.structuredContext.actionType },
+          {
+            label: 'Submitted amount',
+            value: `${question.structuredContext.currency} ${question.structuredContext.amount.toFixed(2)}`,
+          },
+        );
+        break;
+      case 'emergency-action':
+        base.push(
+          { label: 'Urgency', value: question.structuredContext.urgency },
+          {
+            label: 'Emergency category',
+            value: question.structuredContext.emergencyCategory,
+          },
+        );
+        break;
+      case 'customer-commitment':
+        base.push({
+          label: 'Commitment type',
+          value: question.structuredContext.commitmentType,
+        });
+        if (
+          question.structuredContext.amount !== undefined &&
+          question.structuredContext.currency !== undefined
+        ) {
+          base.push({
+            label: 'Commitment amount',
+            value: `${question.structuredContext.currency} ${question.structuredContext.amount.toFixed(2)}`,
+          });
+        }
+        if (question.structuredContext.commitmentDate !== undefined) {
+          base.push({
+            label: 'Commitment date',
+            value: question.structuredContext.commitmentDate,
+          });
+        }
+        break;
+    }
+    if (rule !== undefined) {
+      base.push({ label: 'Required by matching rule', value: rule.requiredContext });
+    }
+    return base;
+  }
+
+  private createActivityEvent(
+    snapshot: PhaseOneSnapshot,
+    eventType: ActivityEventType,
+    entityType: ActivityEvent['entityType'],
+    entityId: string,
+    actorLabel: string,
+    correlationId: string,
+    metadata: ActivityEvent['metadata'],
+    occurredAt: string,
+  ): ActivityEvent {
+    if (snapshot.company === null || snapshot.role === null) {
+      throw new Error('Activity events require an active company and role.');
+    }
+    return {
+      id: this.idFactory('activity-event'),
+      companyId: snapshot.company.id,
+      roleId: snapshot.role.id,
+      eventType,
+      entityType,
+      entityId,
+      actorLabel,
+      occurredAt,
+      correlationId,
+      metadata: { ...metadata },
+    };
   }
 
   private requireActiveScope(): DomainResult<
@@ -1206,6 +1987,51 @@ export class PhaseOneService {
     };
   }
 
+  private questionLinkedGapIsRemediated(snapshot: PhaseOneSnapshot, gap: KnowledgeGap): boolean {
+    const triggeringQuestionIds = gap.triggeringQuestionIds ?? [];
+    if (triggeringQuestionIds.length === 0) return true;
+    const triggeringQuestions = triggeringQuestionIds.flatMap((questionId) => {
+      const question = snapshot.employeeQuestions.find(({ id }) => id === questionId);
+      return question === undefined ? [] : [question];
+    });
+    if (triggeringQuestions.length !== triggeringQuestionIds.length) return false;
+
+    return triggeringQuestions.every((question) => {
+      const originalEvaluation = snapshot.answerEligibilityEvaluations.find(
+        (evaluation) =>
+          evaluation.questionId === question.id &&
+          (gap.eligibilityEvaluationIds ?? []).includes(evaluation.id),
+      );
+      const remediationReason: KnowledgeGapReason = (() => {
+        switch (originalEvaluation?.overallResult) {
+          case 'withheld-missing-knowledge':
+            return 'missing-evidence';
+          case 'withheld-conflicting-knowledge':
+            return 'conflicting-evidence';
+          case 'withheld-invalid-provenance':
+            return 'invalid-provenance';
+          case 'withheld-authority-unclear':
+            return 'authority-unclear';
+          case 'withheld-unsupported-request':
+            return 'unsupported-request';
+          default:
+            return gap.originalReason ?? gap.reason;
+        }
+      })();
+      const requiredGates = QUESTION_GAP_REMEDIATION_GATES[remediationReason];
+      const currentDecision = evaluateQuestionPolicy(
+        snapshot,
+        question,
+        `gap-reconciliation-${gap.id}`,
+        gap.updatedAt,
+      );
+      const gateStatus = new Map(
+        currentDecision.evaluation.gateResults.map(({ gateKey, status }) => [gateKey, status]),
+      );
+      return requiredGates.every((gateKey) => gateStatus.get(gateKey) === 'pass');
+    });
+  }
+
   private reconcileSnapshot(
     snapshot: PhaseOneSnapshot & { readonly company: Company; readonly role: Role },
   ): DomainResult<PhaseOneSnapshot> {
@@ -1218,7 +2044,11 @@ export class PhaseOneService {
         (gap) => gap.topicKey === coverage.topic.key && ACTIVE_GAP_STATUSES.includes(gap.status),
       );
       if (coverage.state === 'approved') {
-        if (activeGap !== undefined && coverage.approvedClaim !== undefined) {
+        if (
+          activeGap !== undefined &&
+          coverage.approvedClaim !== undefined &&
+          this.questionLinkedGapIsRemediated(snapshot, activeGap)
+        ) {
           const updated: KnowledgeGap = {
             ...activeGap,
             status: 'resolved',
@@ -1272,19 +2102,28 @@ export class PhaseOneService {
         continue;
       }
 
+      const questionLinked = (activeGap.triggeringQuestionIds?.length ?? 0) > 0;
+      const reconciledReason = questionLinked ? activeGap.reason : reason;
+      const reconciledDescription = questionLinked ? activeGap.description : description;
+      const reconciledSources = questionLinked
+        ? unique([...activeGap.supportingSourceReferenceIds, ...supportingSourceReferenceIds])
+        : supportingSourceReferenceIds;
+      const reconciledClaims = questionLinked
+        ? unique([...activeGap.relatedClaimIds, ...relatedClaimIds])
+        : relatedClaimIds;
       const changed =
-        activeGap.reason !== reason ||
-        activeGap.description !== description ||
+        activeGap.reason !== reconciledReason ||
+        activeGap.description !== reconciledDescription ||
         JSON.stringify(activeGap.supportingSourceReferenceIds) !==
-          JSON.stringify(supportingSourceReferenceIds) ||
-        JSON.stringify(activeGap.relatedClaimIds) !== JSON.stringify(relatedClaimIds);
+          JSON.stringify(reconciledSources) ||
+        JSON.stringify(activeGap.relatedClaimIds) !== JSON.stringify(reconciledClaims);
       if (changed) {
         const updated: KnowledgeGap = {
           ...activeGap,
-          reason,
-          description,
-          supportingSourceReferenceIds,
-          relatedClaimIds,
+          reason: reconciledReason,
+          description: reconciledDescription,
+          supportingSourceReferenceIds: reconciledSources,
+          relatedClaimIds: reconciledClaims,
           updatedAt: this.clock(),
         };
         knowledgeGaps = knowledgeGaps.map((gap) => (gap.id === updated.id ? updated : gap));

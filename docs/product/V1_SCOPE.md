@@ -4,7 +4,7 @@
 
 The planned V1 transfers one operational role for one company: **Home-Service Office Manager / Dispatcher**. It builds a reviewed body of role knowledge, uses that knowledge to support an employee, and returns unresolved work to the owner as explicit escalations and improvement proposals.
 
-“Planned V1” describes the product boundary, not the current implementation. Phase 2 implements only the completed company/role/review foundation plus manual source intake and the deterministic owner-side gap interviewer described below.
+“Planned V1” describes the product boundary, not permission to begin a later phase. Phase 3 implements the completed company/role/review and source/gap-interviewer foundations plus the first deterministic employee Question-to-System and owner-escalation vertical slice described below.
 
 ## Planned V1 capabilities
 
@@ -12,8 +12,8 @@ The planned V1 transfers one operational role for one company: **Home-Service Of
 - Capture source material and immutable references to the exact evidence used.
 - Extract candidate claims and draft procedures or decision rules while keeping them visibly unapproved.
 - Let an owner approve, reject, or request changes with append-only decision history.
-- Retrieve only approved knowledge for an employee question, then provide a cited grounded answer or escalate.
-- Record missing, conflicting, sensitive, and low-confidence cases as knowledge gaps.
+- Retrieve only approved knowledge for an explicitly categorized employee question, then provide a cited grounded answer or fail closed.
+- Record genuine missing, conflicting, provenance-invalid, unsupported, and unclear-authority deficiencies as knowledge gaps without treating every escalation as a gap.
 - Turn selected gaps into source-backed improvement proposals for owner review.
 - Use approved training scenarios and record attempts without treating model output as policy.
 - Derive responsibility-level and role-level independence metrics from visible, deterministic components.
@@ -43,7 +43,7 @@ Phase 1 provides:
 - an employee route containing only current approved knowledge returned by the domain selector; and
 - a fixed, visibly fictional, idempotent HVAC demonstration record.
 
-## Current Phase 2 boundary
+## Completed Phase 2 boundary
 
 Phase 2 adds:
 
@@ -54,6 +54,21 @@ Phase 2 adds:
 - a risk-prioritized, one-active-question deterministic owner interviewer with typed follow-up rules; and
 - immutable interview answers that create `owner-interview` evidence and proposed claims, then use the existing decision and employee-selector boundaries.
 
-Phase 2 does not provide AI/model behavior, automatic document interpretation or extraction, semantic retrieval, chat, employee questions or answers, file uploads or parsing, authentication, durable or browser persistence, Cloudflare data services, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure. `/training` and `/settings` remain informational placeholders.
+Phase 2 did not provide AI/model behavior, automatic document interpretation or extraction, semantic retrieval, chat, employee questions or answers, file uploads or parsing, authentication, durable or browser persistence, Cloudflare data services, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure.
 
-See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [active plan](../exec-plans/phase-2-source-intake-interviewer.md).
+## Current Phase 3 boundary
+
+Phase 3 adds:
+
+- immutable structured `EmployeeQuestion` records with explicit topic, request type, employee-selected sensitivity, request-specific typed context, and appended corrections;
+- deterministic retrieval of current employee-visible approved claims by explicit topic, with exact source and approval provenance validation and independent explicit-conflict checks;
+- ten inspectable eligibility gates plus fixed fail-closed precedence, with no confidence score, semantic retrieval, or free-text policy/authority inference;
+- immutable fixed-template cited `Answer` records for supported informational or authorized action requests, plus grounded prohibited and safely withheld outcomes;
+- structured authority-boundary and escalation-rule bindings, including structural numeric limits and currencies that are never parsed from prose;
+- deterministic, idempotent `Escalation` records with explicit destinations or configured owner fallback, minimized typed context, and owner assignment/resolution/closure;
+- question/evaluation-linked gap reuse only for genuine missing, conflicting, broken-provenance, unsupported, or unclear-authority deficiencies; and
+- append-only safe `ActivityEvent` records and deterministic Summit Comfort examples covering the supported outcomes.
+
+Phase 3 remains a current-page-session demonstration. It does not provide a model or model gateway, natural-language classification, semantic search, embeddings, RAG, free-form answer generation, automatic sensitivity or authority detection, network requests, messaging, file upload/parsing, authentication, durable or browser persistence, protected storage, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure. `/training` and `/settings` remain informational placeholders.
+
+See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [active plan](../exec-plans/phase-3-question-to-system.md).

@@ -2,7 +2,7 @@
 
 ## Current state
 
-Phase 2 makes no model calls, installs no AI SDK, and has no prompt, autonomous ingestion, semantic retrieval, or generation pipeline. Source text is pasted manually; owners choose exact lines, topics, and candidate wording. The Knowledge Gap Interviewer is a deterministic catalog/rule workflow: checked-in templates and typed answers control its queue and follow-ups. Interview answers become source-backed proposed claims and are not AI output or approved policy. Any model behavior below is a constraint for a later approved execution plan.
+Phase 3 makes no model calls, installs no AI SDK, and has no prompt, autonomous ingestion, semantic retrieval, or generation pipeline. Source text is pasted manually; owners choose exact lines, topics, and candidate wording. Employees explicitly select topic, request type, sensitivity, and typed context. The policy firewall retrieves only by explicit records, evaluates fixed gates, and composes answers from fixed templates. No model participates in question classification, retrieval, eligibility, policy, authority, escalation, sensitivity, citations, or answer composition. Any model behavior below is a constraint for a later approved execution plan.
 
 ## Future boundary
 
@@ -18,7 +18,7 @@ The domain owns trust decisions. Model output is untrusted input that must carry
 
 ## Permitted future assistance
 
-Subject to later plans and server-side controls, a model may draft extracted claims, summarize source material, propose procedures or rules, synthesize an answer from approved context, draft a knowledge-gap improvement, or draft a training scenario. Every artifact remains in its domain category: an answer is not policy, a proposal is not an approved revision, and model confidence is not approval.
+Subject to later plans and server-side controls, a model may draft extracted claims, summarize source material, propose procedures or rules, draft wording after the deterministic firewall has fixed an eligible result and citation set, draft a knowledge-gap improvement, or draft a training scenario. It may not change an outcome, add substantive guidance, alter citations, or convert an informational result into authority. Every artifact remains in its domain category: an answer is not policy, a proposal is not an approved revision, and model confidence is neither approval nor an eligibility input.
 
 ## Prohibited behavior
 
@@ -28,29 +28,27 @@ A model must never:
 - make unapproved or rejected material employee-visible;
 - invent missing citations, authority, procedures, rules, or source text;
 - resolve conflicting evidence without owner review;
-- answer when sensitivity, authority, escalation, or configured evidence checks fail;
+- answer or change the outcome when provenance, explicit conflict, employee-selected sensitivity, authority, escalation, or answer-mode checks fail;
 - generate or adjust an independence score;
 - receive a provider secret from browser code;
 - execute instructions embedded in source material as if they were system instructions.
 
 ## Employee-answer gate
 
-Before a generated answer can be delivered, deterministic application/domain checks must confirm that every supporting revision is approved, in company/role scope, source- and approval-traceable, current, and permitted by sensitivity, confidence, authority, and escalation rules. The response must cite those revisions and be visibly labeled generated/non-policy.
+Phase 3 records ten gates in fixed order: valid scope, topic, structured request context, current approved knowledge, provenance, no explicit conflict, selected sensitivity, structured authority, structured escalation rule, and supported answer mode. Outcome precedence is invalid scope/topic/context; selected sensitivity; explicit prohibition; mandatory escalation/approval; missing, conflicting, or invalid knowledge; unclear structured authority; then eligible answer. An earlier safety result cannot be overridden later.
 
-If any check fails, the result is withheld and RelayOS creates an escalation and appropriate knowledge gap. A fluent draft or high model-reported confidence cannot override this gate. See the canonical [visibility predicate](DOMAIN_MODEL.md#required-visibility-predicate).
+Only `answer-eligible` reaches the fixed-template composer. Every delivered substantive statement cites exact current approved claims, source references, and approval decisions. Informational guidance states that it does not authorize action. A known rule may correctly escalate or prohibit without creating a gap; a gap is created or reused only for missing/conflicting/invalid knowledge, unsupported absent policy/procedure, or unclear structured authority. No model or confidence score participates. See the canonical [visibility and eligibility predicate](DOMAIN_MODEL.md#required-visibility-and-answer-eligibility-predicate).
 
 ## Review and publication
 
 Future generated candidates must enter an unapproved lifecycle state. An owner sees the proposed change, generation label, sources, conflicts, and missing evidence, then records an explicit decision. Approval creates or publishes a distinct immutable knowledge revision; it does not erase the candidate’s generated origin. Rejections remain in history and outside employee retrieval.
 
-The completed Phase 1 lifecycle and Phase 2 additions establish the deterministic subset of that boundary: only a `proposed` claim can be approved; source provenance and an explicit approval decision are mandatory; approved claims and available source versions are immutable; revisions create new versions; and extraction, interviews, gaps, rejection, or unresolved states never become employee-visible. This behavior contains no model-specific branch.
+The completed Phase 1 lifecycle, Phase 2 source/interviewer additions, and Phase 3 policy firewall establish that boundary without a model-specific branch: only a `proposed` claim can be approved; source provenance and an explicit approval decision are mandatory; approved claims and source versions are immutable; extraction, interviews, questions, answers, escalation resolutions, activity events, gaps, rejection, or unresolved states never become policy by themselves.
 
 ## Deterministic demonstration mode
 
-Phase 2 includes a fixed fictional HVAC company and role plus manual-paste document versions, historical line anchors, explicit-topic claims and coverage, reconciled gaps, deterministic questions, and one immutable answered-but-unapproved interview proposal. Repeated loading is idempotent, and the employee view uses the same approved-knowledge selector as owner-entered records. It performs no network or model request and never labels fixture text as live, automatically understood, or generated output.
-
-Later demonstration phases may add seeded employee retrieval, answer, or escalation outcomes only when an execution plan authorizes those features; they must continue using the production domain gates.
+Phase 3 extends the fixed fictional HVAC company and role with seeded structured employee questions, every required eligibility outcome, cited deterministic answers, escalations, genuine gap links, and append-only traces. Repeated loading is idempotent, and every outcome uses the same selector, gates, repository, and lifecycle operations as session-entered records. It performs no network or model request and never labels fixture text as live or automatically understood.
 
 ## Verification expectations for later phases
 
-Tests must cover mixed approved/unapproved retrieval, missing and conflicting evidence, low-confidence thresholds, sensitive content, authority violations, gateway failure, forged citations, prompt injection in sources, append-only decisions, and deterministic demo results. Security details are in [Security](SECURITY.md); the broader flow is in [Data flow](DATA_FLOW.md).
+Phase 3 tests cover mixed approved/unapproved retrieval, missing/conflicting/invalid evidence, employee-selected sensitivity, structured authority and limits, explicit escalation routing, citation integrity, append-only activity, idempotency, and deterministic demo results. Later model work must additionally cover gateway failure, forged citations, prompt injection, provider data handling, and confirmation that model wording cannot change the firewall outcome. Security details are in [Security](SECURITY.md); the broader flow is in [Data flow](DATA_FLOW.md).

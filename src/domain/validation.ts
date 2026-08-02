@@ -1,6 +1,8 @@
 import type {
   ActivateSetupInput,
+  ActivityEvent,
   AuthorityBoundaryInput,
+  EmployeeQuestionInput,
   EscalationRuleInput,
   InterviewAnswer,
   KnowledgeClaimInput,
@@ -11,6 +13,13 @@ import type {
   SourceReferenceInput,
 } from './entities';
 import { getOperationalTopic, isOperationalTopicKey } from './operationalTopics';
+import {
+  ANSWER_ELIGIBILITY_GATE_ORDER,
+  CURRENCY_CODES,
+  EMPLOYEE_QUESTION_REQUEST_TYPES,
+  EMPLOYEE_SENSITIVITY_SELECTIONS,
+  validateEmployeeQuestionInput,
+} from './questionPolicyFirewall';
 import { domainFailure, domainSuccess, type DomainResult } from './result';
 import {
   excerptSourceLines,
@@ -58,9 +67,78 @@ export const INTERVIEW_QUESTION_STATUSES = [
   'skipped',
   'withdrawn',
 ] as const;
+export const EMPLOYEE_QUESTION_STATUSES = [
+  'received',
+  'evaluating',
+  'answered',
+  'withheld',
+  'escalated',
+  'closed',
+] as const;
+export const ANSWER_ELIGIBILITY_RESULTS = [
+  'answer-eligible',
+  'escalation-required',
+  'prohibited',
+  'withheld-missing-knowledge',
+  'withheld-conflicting-knowledge',
+  'withheld-invalid-provenance',
+  'withheld-sensitive',
+  'withheld-authority-unclear',
+  'withheld-unsupported-request',
+] as const;
+export const ANSWER_STATUSES = ['delivered', 'withheld', 'escalated', 'prohibited'] as const;
+export const ANSWER_MODES = [
+  'approved-guidance',
+  'approved-guidance-with-authority',
+  'known-escalation',
+  'prohibited-action',
+  'withheld',
+] as const;
+export const ESCALATION_STATUSES = ['open', 'assigned', 'resolved', 'closed'] as const;
+export const ESCALATION_REASONS = [
+  'approval-required',
+  'mandatory-escalation',
+  'emergency',
+  'sensitive-context',
+  'authority-unclear',
+  'missing-knowledge',
+  'conflicting-knowledge',
+  'invalid-provenance',
+  'unsupported-request',
+] as const;
+export const ACTIVITY_ENTITY_TYPES = [
+  'employee-question',
+  'answer-evaluation',
+  'answer',
+  'escalation',
+  'knowledge-gap',
+] as const;
+export const ACTIVITY_EVENT_TYPES = [
+  'question-received',
+  'question-evaluated',
+  'answer-delivered',
+  'answer-withheld',
+  'escalation-opened',
+  'escalation-assigned',
+  'escalation-resolved',
+  'escalation-closed',
+  'gap-linked-to-question',
+] as const;
+export const KNOWLEDGE_GAP_REASONS = [
+  'missing-evidence',
+  'incomplete-evidence',
+  'conflicting-evidence',
+  'authority-unclear',
+  'invalid-provenance',
+  'unsupported-request',
+] as const;
 
 function isBlank(value: string): boolean {
   return value.trim().length === 0;
+}
+
+function sameOrderedValues(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function required(value: string, field: string, label: string): DomainResult<void> {
@@ -107,13 +185,73 @@ export function validateAuthorityBoundaryInput(input: AuthorityBoundaryInput): D
   ]);
   if (!base.ok) return base;
 
-  return PERMISSION_LEVELS.includes(input.permissionLevel)
-    ? domainSuccess(undefined)
-    : domainFailure(
+  if (!PERMISSION_LEVELS.includes(input.permissionLevel)) {
+    return domainFailure(
+      'validation-error',
+      'Permission level is invalid.',
+      'authorityBoundary.permissionLevel',
+    );
+  }
+  if (
+    input.topicKeys !== undefined &&
+    (input.topicKeys.length === 0 || input.topicKeys.some((key) => !isOperationalTopicKey(key)))
+  ) {
+    return domainFailure(
+      'invalid-topic',
+      'Structured authority topics must be explicit valid topics.',
+      'authorityBoundary.topicKeys',
+    );
+  }
+  if (
+    input.applicableRequestTypes !== undefined &&
+    (input.applicableRequestTypes.length === 0 ||
+      input.applicableRequestTypes.some(
+        (requestType) => !EMPLOYEE_QUESTION_REQUEST_TYPES.includes(requestType),
+      ))
+  ) {
+    return domainFailure(
+      'invalid-request-type',
+      'Structured authority request types are invalid.',
+      'authorityBoundary.applicableRequestTypes',
+    );
+  }
+  if (
+    input.permissionLevel === 'may-decide' &&
+    input.applicableRequestTypes?.some(
+      (requestType) =>
+        requestType !== 'decision-request' &&
+        requestType !== 'exception-request' &&
+        requestType !== 'customer-commitment',
+    )
+  ) {
+    return domainFailure(
+      'invalid-request-type',
+      'May-decide authority can bind only to explicit decision, exception, or nonfinancial commitment requests.',
+      'authorityBoundary.applicableRequestTypes',
+    );
+  }
+  const hasNumericBinding =
+    input.numericLimit !== undefined ||
+    input.currency !== undefined ||
+    input.structuredConstraintType !== undefined;
+  if (hasNumericBinding) {
+    if (
+      input.permissionLevel !== 'may-act-within-limit' ||
+      input.structuredConstraintType !== 'amount-limit' ||
+      typeof input.numericLimit !== 'number' ||
+      !Number.isFinite(input.numericLimit) ||
+      input.numericLimit < 0 ||
+      input.currency === undefined ||
+      !CURRENCY_CODES.includes(input.currency)
+    ) {
+      return domainFailure(
         'validation-error',
-        'Permission level is invalid.',
-        'authorityBoundary.permissionLevel',
+        'A structured amount limit requires a nonnegative limit, currency, and compatible permission.',
+        'authorityBoundary.numericLimit',
       );
+    }
+  }
+  return domainSuccess(undefined);
 }
 
 export function validateEscalationRuleInput(input: EscalationRuleInput): DomainResult<void> {
@@ -133,9 +271,57 @@ export function validateEscalationRuleInput(input: EscalationRuleInput): DomainR
   ]);
   if (!base.ok) return base;
 
-  return ESCALATION_URGENCIES.includes(input.urgency)
-    ? domainSuccess(undefined)
-    : domainFailure('validation-error', 'Escalation urgency is invalid.', 'escalationRule.urgency');
+  if (!ESCALATION_URGENCIES.includes(input.urgency)) {
+    return domainFailure(
+      'validation-error',
+      'Escalation urgency is invalid.',
+      'escalationRule.urgency',
+    );
+  }
+  if (
+    input.topicKeys !== undefined &&
+    (input.topicKeys.length === 0 || input.topicKeys.some((key) => !isOperationalTopicKey(key)))
+  ) {
+    return domainFailure(
+      'invalid-topic',
+      'Structured escalation topics must be explicit valid topics.',
+      'escalationRule.topicKeys',
+    );
+  }
+  if (
+    input.applicableRequestTypes !== undefined &&
+    (input.applicableRequestTypes.length === 0 ||
+      input.applicableRequestTypes.some(
+        (requestType) => !EMPLOYEE_QUESTION_REQUEST_TYPES.includes(requestType),
+      ))
+  ) {
+    return domainFailure(
+      'invalid-request-type',
+      'Structured escalation request types are invalid.',
+      'escalationRule.applicableRequestTypes',
+    );
+  }
+  if (input.urgencyMatch !== undefined && !ESCALATION_URGENCIES.includes(input.urgencyMatch)) {
+    return domainFailure(
+      'validation-error',
+      'Structured escalation urgency match is invalid.',
+      'escalationRule.urgencyMatch',
+    );
+  }
+  if (
+    input.sensitivityCategories !== undefined &&
+    (input.sensitivityCategories.length === 0 ||
+      input.sensitivityCategories.some(
+        (selection) => !EMPLOYEE_SENSITIVITY_SELECTIONS.includes(selection),
+      ))
+  ) {
+    return domainFailure(
+      'invalid-sensitivity-selection',
+      'Structured escalation sensitivity categories are invalid.',
+      'escalationRule.sensitivityCategories',
+    );
+  }
+  return domainSuccess(undefined);
 }
 
 export function validateRoleInput(input: RoleInput): DomainResult<void> {
@@ -251,7 +437,12 @@ export function validatePhaseOneSnapshot(
       snapshot.approvalDecisions.length > 0 ||
       snapshot.knowledgeGaps.length > 0 ||
       snapshot.interviewQuestions.length > 0 ||
-      snapshot.interviewAnswers.length > 0;
+      snapshot.interviewAnswers.length > 0 ||
+      snapshot.employeeQuestions.length > 0 ||
+      snapshot.answerEligibilityEvaluations.length > 0 ||
+      snapshot.answers.length > 0 ||
+      snapshot.escalations.length > 0 ||
+      snapshot.activityEvents.length > 0;
     return hasOrphans
       ? domainFailure(
           'relationship-mismatch',
@@ -270,7 +461,12 @@ export function validatePhaseOneSnapshot(
       snapshot.approvalDecisions.length > 0 ||
       snapshot.knowledgeGaps.length > 0 ||
       snapshot.interviewQuestions.length > 0 ||
-      snapshot.interviewAnswers.length > 0;
+      snapshot.interviewAnswers.length > 0 ||
+      snapshot.employeeQuestions.length > 0 ||
+      snapshot.answerEligibilityEvaluations.length > 0 ||
+      snapshot.answers.length > 0 ||
+      snapshot.escalations.length > 0 ||
+      snapshot.activityEvents.length > 0;
     return !hasRoleRecords
       ? domainSuccess(snapshot)
       : domainFailure('role-not-found', 'Knowledge records require an active role.');
@@ -326,6 +522,11 @@ export function validatePhaseOneSnapshot(
     ...snapshot.knowledgeGaps,
     ...snapshot.interviewQuestions,
     ...snapshot.interviewAnswers,
+    ...snapshot.employeeQuestions,
+    ...snapshot.answerEligibilityEvaluations,
+    ...snapshot.answers,
+    ...snapshot.escalations,
+    ...snapshot.activityEvents,
   ];
   const duplicate = duplicateId(allIdentified);
   if (duplicate !== undefined) {
@@ -337,6 +538,12 @@ export function validatePhaseOneSnapshot(
   const gapIds = new Set(snapshot.knowledgeGaps.map(({ id }) => id));
   const questionIds = new Set(snapshot.interviewQuestions.map(({ id }) => id));
   const answerIds = new Set(snapshot.interviewAnswers.map(({ id }) => id));
+  const employeeQuestionIds = new Set(snapshot.employeeQuestions.map(({ id }) => id));
+  const evaluationIds = new Set(snapshot.answerEligibilityEvaluations.map(({ id }) => id));
+  const phaseThreeAnswerIds = new Set(snapshot.answers.map(({ id }) => id));
+  const escalationIds = new Set(snapshot.escalations.map(({ id }) => id));
+  const authorityBoundaryIds = new Set(snapshot.role.authorityBoundaries.map(({ id }) => id));
+  const escalationRuleIds = new Set(snapshot.role.escalationRules.map(({ id }) => id));
 
   for (const document of snapshot.sourceDocuments) {
     if (document.companyId !== snapshot.company.id || document.roleId !== snapshot.role.id) {
@@ -576,6 +783,12 @@ export function validatePhaseOneSnapshot(
     if (!KNOWLEDGE_GAP_STATUSES.includes(gap.status)) {
       return domainFailure('validation-error', 'Knowledge gap status is invalid.');
     }
+    if (!KNOWLEDGE_GAP_REASONS.includes(gap.reason)) {
+      return domainFailure('validation-error', 'Knowledge gap reason is invalid.');
+    }
+    if (gap.originalReason !== undefined && !KNOWLEDGE_GAP_REASONS.includes(gap.originalReason)) {
+      return domainFailure('validation-error', 'Knowledge gap original reason is invalid.');
+    }
     if (gap.riskTier !== getOperationalTopic(gap.topicKey).riskTier) {
       return domainFailure('relationship-mismatch', 'Knowledge gap risk must match its topic.');
     }
@@ -616,6 +829,40 @@ export function validatePhaseOneSnapshot(
           'relationship-mismatch',
           'A resolved gap must identify an approved or later-superseded claim for the same topic.',
         );
+      }
+    }
+    const hasQuestionLinks =
+      gap.triggeringQuestionIds !== undefined || gap.eligibilityEvaluationIds !== undefined;
+    if (hasQuestionLinks) {
+      if (
+        gap.triggeringQuestionIds === undefined ||
+        gap.eligibilityEvaluationIds === undefined ||
+        gap.triggeringQuestionIds.length === 0 ||
+        gap.eligibilityEvaluationIds.length === 0 ||
+        gap.triggeringQuestionIds.some((questionId) => !employeeQuestionIds.has(questionId)) ||
+        gap.eligibilityEvaluationIds.some((evaluationId) => !evaluationIds.has(evaluationId))
+      ) {
+        return domainFailure(
+          'relationship-mismatch',
+          'A question-linked gap must retain existing triggering questions and evaluations.',
+        );
+      }
+      for (const evaluationId of gap.eligibilityEvaluationIds) {
+        const evaluation = snapshot.answerEligibilityEvaluations.find(
+          ({ id }) => id === evaluationId,
+        );
+        const question = snapshot.employeeQuestions.find(({ id }) => id === evaluation?.questionId);
+        if (
+          evaluation === undefined ||
+          question === undefined ||
+          !gap.triggeringQuestionIds.includes(question.id) ||
+          question.topicKey !== gap.topicKey
+        ) {
+          return domainFailure(
+            'relationship-mismatch',
+            'Question-linked gap evaluations must match a triggering same-topic question.',
+          );
+        }
       }
     }
   }
@@ -680,6 +927,499 @@ export function validatePhaseOneSnapshot(
     if (!relation.ok) return relation;
   }
 
+  const evaluatedQuestionIds = new Set<string>();
+  for (const question of snapshot.employeeQuestions) {
+    const questionInput: EmployeeQuestionInput = {
+      employeeLabel: question.employeeLabel,
+      questionText: question.questionText,
+      topicKey: question.topicKey,
+      requestType: question.requestType,
+      sensitivitySelection: question.sensitivitySelection,
+      structuredContext: question.structuredContext,
+      ...(question.correctsQuestionId === undefined
+        ? {}
+        : { correctsQuestionId: question.correctsQuestionId }),
+    };
+    const questionValidation = validateEmployeeQuestionInput(questionInput);
+    if (!questionValidation.ok) return questionValidation;
+    if (
+      question.companyId !== snapshot.company.id ||
+      question.roleId !== snapshot.role.id ||
+      isBlank(question.correlationId) ||
+      isBlank(question.submittedAt)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Every employee question must retain active scope, submission time, and correlation.',
+      );
+    }
+    if (!EMPLOYEE_QUESTION_STATUSES.includes(question.status)) {
+      return domainFailure('validation-error', 'Employee question status is invalid.');
+    }
+    if (question.correctsQuestionId !== undefined) {
+      const corrected = snapshot.employeeQuestions.find(
+        ({ id }) => id === question.correctsQuestionId,
+      );
+      if (
+        corrected === undefined ||
+        corrected.id === question.id ||
+        corrected.companyId !== question.companyId ||
+        corrected.roleId !== question.roleId
+      ) {
+        return domainFailure(
+          'relationship-mismatch',
+          'A corrected question must reference an earlier question in the same scope.',
+        );
+      }
+    }
+
+    const evaluations = snapshot.answerEligibilityEvaluations.filter(
+      ({ questionId }) => questionId === question.id,
+    );
+    const answers = snapshot.answers.filter(({ questionId }) => questionId === question.id);
+    const escalations = snapshot.escalations.filter(({ questionId }) => questionId === question.id);
+    if (evaluations.length > 1 || answers.length > 1) {
+      return domainFailure(
+        'duplicate-record',
+        'An employee question may have only one immutable evaluation and answer.',
+      );
+    }
+    const outcomeRequired = ['answered', 'withheld', 'escalated', 'closed'].includes(
+      question.status,
+    );
+    if (outcomeRequired && (evaluations.length !== 1 || answers.length !== 1)) {
+      return domainFailure(
+        'relationship-mismatch',
+        'A terminal employee question requires one immutable evaluation and answer.',
+      );
+    }
+    if (
+      (question.status === 'received' || question.status === 'evaluating') &&
+      (evaluations.length > 0 || answers.length > 0)
+    ) {
+      return domainFailure(
+        'invalid-transition',
+        'A received or evaluating question cannot already have a terminal outcome.',
+      );
+    }
+    if (question.status === 'answered' && answers[0]?.status !== 'delivered') {
+      return domainFailure('relationship-mismatch', 'Answered questions require delivery.');
+    }
+    if (question.status === 'escalated' && answers[0]?.status !== 'escalated') {
+      return domainFailure(
+        'relationship-mismatch',
+        'Escalated questions require an escalated answer record.',
+      );
+    }
+    if (question.status === 'escalated' && escalations.length !== 1) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Escalated questions require one retained escalation.',
+      );
+    }
+    if (question.status === 'withheld' && answers[0]?.status === 'delivered') {
+      return domainFailure('relationship-mismatch', 'Withheld questions cannot deliver answers.');
+    }
+    if (question.status === 'closed' && question.closedAt === undefined) {
+      return domainFailure('relationship-mismatch', 'Closed questions require a close time.');
+    }
+    if (question.status !== 'closed' && question.closedAt !== undefined) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Only a closed question may have a close time.',
+      );
+    }
+  }
+
+  for (const evaluation of snapshot.answerEligibilityEvaluations) {
+    const question = snapshot.employeeQuestions.find(({ id }) => id === evaluation.questionId);
+    if (
+      question === undefined ||
+      evaluation.correlationId !== question.correlationId ||
+      isBlank(evaluation.evaluatedAt)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Every eligibility evaluation must match an existing correlated question.',
+      );
+    }
+    if (evaluatedQuestionIds.has(evaluation.questionId)) {
+      return domainFailure(
+        'duplicate-record',
+        'An employee question may have only one eligibility evaluation.',
+      );
+    }
+    evaluatedQuestionIds.add(evaluation.questionId);
+    if (!ANSWER_ELIGIBILITY_RESULTS.includes(evaluation.overallResult)) {
+      return domainFailure('validation-error', 'Eligibility result is invalid.');
+    }
+    if (
+      evaluation.gateResults.length !== ANSWER_ELIGIBILITY_GATE_ORDER.length ||
+      evaluation.gateResults.some(
+        (result, index) => result.gateKey !== ANSWER_ELIGIBILITY_GATE_ORDER[index],
+      )
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Eligibility gate trace must retain the fixed complete gate order.',
+      );
+    }
+    if (
+      evaluation.gateResults.some(
+        (result) =>
+          !['pass', 'fail', 'not-applicable'].includes(result.status) ||
+          isBlank(result.reason) ||
+          Object.prototype.hasOwnProperty.call(result, 'confidence'),
+      ) ||
+      Object.prototype.hasOwnProperty.call(evaluation, 'confidence')
+    ) {
+      return domainFailure(
+        'validation-error',
+        'Eligibility gates require explicit status/reason and cannot contain confidence scores.',
+      );
+    }
+    if (
+      evaluation.eligibleClaimIds.some((id) => !claimIds.has(id)) ||
+      evaluation.eligibleSourceReferenceIds.some((id) => !sourceIds.has(id)) ||
+      evaluation.approvalDecisionIds.some(
+        (id) => !snapshot.approvalDecisions.some((decision) => decision.id === id),
+      ) ||
+      evaluation.matchingAuthorityBoundaryIds.some((id) => !authorityBoundaryIds.has(id)) ||
+      evaluation.matchingEscalationRuleIds.some((id) => !escalationRuleIds.has(id))
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Eligibility trace record links must resolve within the active snapshot.',
+      );
+    }
+    const eligibleClaims = evaluation.eligibleClaimIds.flatMap((id) => {
+      const claim = snapshot.knowledgeClaims.find((candidate) => candidate.id === id);
+      return claim === undefined ? [] : [claim];
+    });
+    const expectedClaimIds = eligibleClaims
+      .map(({ id }) => id)
+      .sort((left, right) => left.localeCompare(right));
+    const expectedSourceReferenceIds = [
+      ...new Set(
+        eligibleClaims.flatMap((claim) =>
+          [...claim.sourceReferenceIds].sort((left, right) => left.localeCompare(right)),
+        ),
+      ),
+    ];
+    const expectedApprovalDecisionIds = eligibleClaims.flatMap((claim) =>
+      snapshot.approvalDecisions
+        .filter(
+          (decision) =>
+            decision.claimId === claim.id &&
+            decision.claimVersion === claim.version &&
+            decision.decision === 'approve',
+        )
+        .map(({ id }) => id)
+        .sort((left, right) => left.localeCompare(right)),
+    );
+    if (
+      eligibleClaims.some(
+        (claim) =>
+          claim.companyId !== question.companyId ||
+          claim.roleId !== question.roleId ||
+          claim.topicKey !== question.topicKey ||
+          (claim.lifecycleStatus !== 'approved' && claim.lifecycleStatus !== 'superseded'),
+      ) ||
+      !sameOrderedValues(evaluation.eligibleClaimIds, expectedClaimIds) ||
+      !sameOrderedValues(evaluation.eligibleSourceReferenceIds, expectedSourceReferenceIds) ||
+      !sameOrderedValues(evaluation.approvalDecisionIds, expectedApprovalDecisionIds)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Eligibility evidence must retain stable same-topic claim, source, and exact approval provenance.',
+      );
+    }
+    const withheld = evaluation.overallResult.startsWith('withheld-');
+    if (
+      (withheld && evaluation.withholdReason !== evaluation.overallResult) ||
+      (!withheld && evaluation.withholdReason !== undefined)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Evaluation withhold reason must exactly match a withheld result.',
+      );
+    }
+  }
+
+  for (const answer of snapshot.answers) {
+    const question = snapshot.employeeQuestions.find(({ id }) => id === answer.questionId);
+    const evaluation = snapshot.answerEligibilityEvaluations.find(
+      ({ id }) => id === answer.eligibilityEvaluationId,
+    );
+    if (
+      question === undefined ||
+      evaluation === undefined ||
+      evaluation.questionId !== question.id ||
+      answer.companyId !== question.companyId ||
+      answer.roleId !== question.roleId ||
+      answer.correlationId !== question.correlationId ||
+      isBlank(answer.responseText)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Every answer must retain its exact question, evaluation, scope, and correlation.',
+      );
+    }
+    if (!ANSWER_STATUSES.includes(answer.status) || !ANSWER_MODES.includes(answer.answerMode)) {
+      return domainFailure('validation-error', 'Answer status or mode is invalid.');
+    }
+    const linkedEscalation = snapshot.escalations.find(
+      (candidate) => candidate.questionId === question.id,
+    );
+    const expectedOutcome = (() => {
+      switch (evaluation.overallResult) {
+        case 'answer-eligible':
+          return {
+            status: 'delivered' as const,
+            mode:
+              question.requestType === 'policy-lookup' ||
+              question.requestType === 'procedure-lookup'
+                ? ('approved-guidance' as const)
+                : ('approved-guidance-with-authority' as const),
+          };
+        case 'prohibited':
+          return { status: 'prohibited' as const, mode: 'prohibited-action' as const };
+        case 'escalation-required':
+          return linkedEscalation === undefined
+            ? { status: 'withheld' as const, mode: 'withheld' as const }
+            : { status: 'escalated' as const, mode: 'known-escalation' as const };
+        default:
+          return linkedEscalation === undefined
+            ? { status: 'withheld' as const, mode: 'withheld' as const }
+            : { status: 'escalated' as const, mode: 'withheld' as const };
+      }
+    })();
+    if (
+      answer.status !== expectedOutcome.status ||
+      answer.answerMode !== expectedOutcome.mode ||
+      ((evaluation.overallResult === 'answer-eligible' ||
+        evaluation.overallResult === 'prohibited') &&
+        linkedEscalation !== undefined)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Answer status and mode must agree with the immutable eligibility result and escalation link.',
+      );
+    }
+    if (
+      answer.citedClaimIds.some((id) => !evaluation.eligibleClaimIds.includes(id)) ||
+      answer.citedSourceReferenceIds.some(
+        (id) => !evaluation.eligibleSourceReferenceIds.includes(id),
+      ) ||
+      answer.citedApprovalDecisionIds.some((id) => !evaluation.approvalDecisionIds.includes(id)) ||
+      answer.citedAuthorityBoundaryIds.some(
+        (id) => !evaluation.matchingAuthorityBoundaryIds.includes(id),
+      )
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Answer citations must be a subset of the immutable eligibility trace.',
+      );
+    }
+    if (
+      answer.status === 'delivered' &&
+      (answer.deliveredAt === undefined ||
+        answer.citedClaimIds.length === 0 ||
+        answer.citedSourceReferenceIds.length === 0 ||
+        answer.citedApprovalDecisionIds.length === 0)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Delivered answers require delivery time plus claim, source, and approval citations.',
+      );
+    }
+    const expectedAuthorityCitations =
+      answer.status === 'delivered' ||
+      answer.status === 'prohibited' ||
+      answer.status === 'escalated'
+        ? evaluation.matchingAuthorityBoundaryIds
+        : [];
+    if (
+      (answer.status === 'delivered' &&
+        (!sameOrderedValues(answer.citedClaimIds, evaluation.eligibleClaimIds) ||
+          !sameOrderedValues(
+            answer.citedSourceReferenceIds,
+            evaluation.eligibleSourceReferenceIds,
+          ) ||
+          !sameOrderedValues(answer.citedApprovalDecisionIds, evaluation.approvalDecisionIds))) ||
+      (answer.status !== 'delivered' &&
+        (answer.citedClaimIds.length > 0 ||
+          answer.citedSourceReferenceIds.length > 0 ||
+          answer.citedApprovalDecisionIds.length > 0)) ||
+      !sameOrderedValues(answer.citedAuthorityBoundaryIds, expectedAuthorityCitations)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Answer citations must exactly match the evidence allowed by its recorded outcome.',
+      );
+    }
+    if (answer.status !== 'delivered' && answer.deliveredAt !== undefined) {
+      return domainFailure('relationship-mismatch', 'Only delivered answers have delivery time.');
+    }
+    if (answer.status === 'prohibited' && answer.citedAuthorityBoundaryIds.length === 0) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Prohibited answers must cite the matching structured boundary.',
+      );
+    }
+    if (
+      answer.withheldReason !== undefined &&
+      answer.withheldReason !== evaluation.withholdReason
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Answer withhold reason must match its eligibility evaluation.',
+      );
+    }
+  }
+
+  const activeEscalationQuestions = new Set<string>();
+  for (const escalation of snapshot.escalations) {
+    const question = snapshot.employeeQuestions.find(({ id }) => id === escalation.questionId);
+    const evaluation = snapshot.answerEligibilityEvaluations.find(
+      (candidate) => candidate.questionId === escalation.questionId,
+    );
+    if (
+      question === undefined ||
+      evaluation === undefined ||
+      escalation.companyId !== question.companyId ||
+      escalation.roleId !== question.roleId ||
+      escalation.correlationId !== question.correlationId ||
+      isBlank(escalation.destination) ||
+      !ESCALATION_URGENCIES.includes(escalation.urgency) ||
+      !ESCALATION_REASONS.includes(escalation.reason) ||
+      !ESCALATION_STATUSES.includes(escalation.status)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Every escalation must retain valid scope, question, evaluation, destination, and state.',
+      );
+    }
+    if (
+      escalation.requiredContext.some(
+        ({ label, value }) =>
+          isBlank(label) ||
+          isBlank(value) ||
+          (question.sensitivitySelection !== 'none' &&
+            question.questionText.length > 3 &&
+            value.includes(question.questionText)),
+      )
+    ) {
+      return domainFailure(
+        'validation-error',
+        'Escalation context must be structured, nonblank, and sensitivity-minimized.',
+      );
+    }
+    if (
+      escalation.matchingBoundaryIds.some((id) => !authorityBoundaryIds.has(id)) ||
+      escalation.matchingEscalationRuleIds.some((id) => !escalationRuleIds.has(id)) ||
+      escalation.matchingBoundaryIds.some(
+        (id) => !evaluation.matchingAuthorityBoundaryIds.includes(id),
+      ) ||
+      escalation.matchingEscalationRuleIds.some(
+        (id) => !evaluation.matchingEscalationRuleIds.includes(id),
+      )
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Escalation boundary and rule links must match the eligibility trace.',
+      );
+    }
+    if (
+      escalation.relatedGapId !== undefined &&
+      !snapshot.knowledgeGaps.some(({ id }) => id === escalation.relatedGapId)
+    ) {
+      return domainFailure('gap-not-found', 'Escalation related gap was not found.');
+    }
+    if (escalation.status === 'open') {
+      if (
+        escalation.assignedAt !== undefined ||
+        escalation.resolvedAt !== undefined ||
+        escalation.resolutionSummary !== undefined
+      ) {
+        return domainFailure('invalid-transition', 'Open escalation lifecycle data is invalid.');
+      }
+    }
+    if (
+      escalation.status === 'assigned' &&
+      (escalation.assignedAt === undefined || isBlank(escalation.assignedToLabel ?? ''))
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Assigned escalations require assignment time and label.',
+      );
+    }
+    if (
+      (escalation.status === 'resolved' || escalation.status === 'closed') &&
+      (escalation.resolvedAt === undefined ||
+        isBlank(escalation.resolutionSummary ?? '') ||
+        isBlank(escalation.resolvedByLabel ?? ''))
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Resolved and closed escalations require immutable resolution details.',
+      );
+    }
+    if (escalation.status === 'open' || escalation.status === 'assigned') {
+      if (activeEscalationQuestions.has(escalation.questionId)) {
+        return domainFailure('duplicate-record', 'A question may have only one active escalation.');
+      }
+      activeEscalationQuestions.add(escalation.questionId);
+    }
+  }
+
+  for (const event of snapshot.activityEvents) {
+    if (
+      event.companyId !== snapshot.company.id ||
+      event.roleId !== snapshot.role.id ||
+      !ACTIVITY_EVENT_TYPES.includes(event.eventType) ||
+      !ACTIVITY_ENTITY_TYPES.includes(event.entityType) ||
+      isBlank(event.actorLabel) ||
+      isBlank(event.occurredAt) ||
+      isBlank(event.correlationId) ||
+      !activityEntityExists(snapshot, event)
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Every activity event must retain valid scope, actor, correlation, type, and entity.',
+      );
+    }
+    const sensitiveQuestion = snapshot.employeeQuestions.find(
+      (question) =>
+        question.correlationId === event.correlationId && question.sensitivitySelection !== 'none',
+    );
+    if (
+      sensitiveQuestion !== undefined &&
+      sensitiveQuestion.questionText.length > 3 &&
+      Object.values(event.metadata).some(
+        (value) => typeof value === 'string' && value.includes(sensitiveQuestion.questionText),
+      )
+    ) {
+      return domainFailure(
+        'validation-error',
+        'Activity metadata cannot contain raw sensitive question text.',
+      );
+    }
+  }
+
+  for (const question of snapshot.employeeQuestions) {
+    if (
+      !snapshot.activityEvents.some(
+        (event) => event.eventType === 'question-received' && event.entityId === question.id,
+      )
+    ) {
+      return domainFailure(
+        'relationship-mismatch',
+        'Every employee question requires an append-only received event.',
+      );
+    }
+  }
+
   if ([...gapIds].length !== snapshot.knowledgeGaps.length) {
     return domainFailure('duplicate-record', 'Knowledge gap IDs must be unique.');
   }
@@ -689,7 +1429,34 @@ export function validatePhaseOneSnapshot(
   if ([...answerIds].length !== snapshot.interviewAnswers.length) {
     return domainFailure('duplicate-record', 'Interview answer IDs must be unique.');
   }
+  if ([...employeeQuestionIds].length !== snapshot.employeeQuestions.length) {
+    return domainFailure('duplicate-record', 'Employee question IDs must be unique.');
+  }
+  if ([...evaluationIds].length !== snapshot.answerEligibilityEvaluations.length) {
+    return domainFailure('duplicate-record', 'Eligibility evaluation IDs must be unique.');
+  }
+  if ([...phaseThreeAnswerIds].length !== snapshot.answers.length) {
+    return domainFailure('duplicate-record', 'Answer IDs must be unique.');
+  }
+  if ([...escalationIds].length !== snapshot.escalations.length) {
+    return domainFailure('duplicate-record', 'Escalation IDs must be unique.');
+  }
   return domainSuccess(snapshot);
+}
+
+function activityEntityExists(snapshot: PhaseOneSnapshot, event: ActivityEvent): boolean {
+  switch (event.entityType) {
+    case 'employee-question':
+      return snapshot.employeeQuestions.some(({ id }) => id === event.entityId);
+    case 'answer-evaluation':
+      return snapshot.answerEligibilityEvaluations.some(({ id }) => id === event.entityId);
+    case 'answer':
+      return snapshot.answers.some(({ id }) => id === event.entityId);
+    case 'escalation':
+      return snapshot.escalations.some(({ id }) => id === event.entityId);
+    case 'knowledge-gap':
+      return snapshot.knowledgeGaps.some(({ id }) => id === event.entityId);
+  }
 }
 
 function validateInterviewAnswer(

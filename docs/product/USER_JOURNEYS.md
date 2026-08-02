@@ -1,6 +1,6 @@
 # RelayOS user journeys
 
-These are target V1 journeys unless explicitly labeled Phase 1 or Phase 2. They define outcomes and safety gates, not permission to implement later-phase features.
+These are target V1 journeys unless explicitly labeled Phase 1, Phase 2, or Phase 3. They define outcomes and safety gates, not permission to implement later-phase features.
 
 ## Phase 1: owner establishes the role system
 
@@ -29,7 +29,7 @@ The owner may instead load the fixed fictional Summit Comfort Heating & Air reco
 3. The selector returns only approved, current, nonsuperseded claims in the active company and role scope.
 4. If none qualify, the route explains that no approved knowledge is available.
 
-There is no employee question box, chat, generated answer, training, or score in Phase 2. Proposed, extracted, rejected, missing-information, conflicting-information, and superseded claims never enter this view; source documents, gaps, interview questions, and raw answers are also withheld.
+At the completed Phase 1–2 boundary there was no employee question box, chat, generated answer, training, or score. Proposed, extracted, rejected, missing-information, conflicting-information, and superseded claims never entered this view; source documents, gaps, interview questions, and raw answers were also withheld. Phase 3 preserves those exclusions while adding structured questions and policy-firewall outcomes.
 
 ## Phase 2: owner builds exact source-backed candidates
 
@@ -55,15 +55,29 @@ There is no employee question box, chat, generated answer, training, or score in
 
 **Safety gate:** a gap state, answer, dismissal, or proposed claim never affects employee visibility directly. Only the approved-knowledge selector does.
 
-## Future: employee asks an operational question
+## Phase 3: employee asks a structured operational question
 
-1. The employee submits a question within the supported role.
-2. RelayOS retrieves only approved knowledge scoped to the company and role.
-3. Deterministic checks evaluate evidence coverage, conflicts, sensitivity, confidence, authority, and escalation rules.
-4. If eligible, RelayOS returns a grounded answer with citations and a clear generated/non-policy label.
-5. Otherwise, it creates an escalation and a knowledge gap instead of guessing.
+1. The employee chooses one canonical operational topic, one request type, and one sensitivity value, then completes only the typed fields required for that request and enters the original question text.
+2. The page warns against pasting passwords, payment-card values, health details, or unnecessary personal information. RelayOS retains the text but never parses it to infer topic, policy, sensitivity, conflict, authority, limits, or destination.
+3. RelayOS retrieves every current approved employee-eligible claim for the explicit topic and validates exact source and approval provenance. It separately checks explicit conflicts.
+4. Ten deterministic gates evaluate scope, topic, context, approved knowledge, provenance, conflict, selected sensitivity, structured authority, structured escalation rules, and supported answer mode in a fixed fail-closed precedence.
+5. An informational policy/procedure lookup that passes every gate receives fixed-template approved guidance, exact citations, approval provenance, and a statement that information does not authorize action.
+6. An action request receives guidance with authority only when an explicitly bound boundary permits it. Numeric limits and currencies come from typed fields, never free text.
+7. A matching prohibition produces a grounded prohibited outcome. A matching approval, mandatory escalation, emergency, or sensitivity-handling rule opens or reuses an escalation with no fake gap.
+8. Missing/conflicting/invalid knowledge, unsupported absent policy/procedure, or missing structured authority withholds the answer, opens an appropriate escalation, and creates or reuses an accurately categorized topic gap.
+9. The result and actual question history show the safe reason, citations when applicable, escalation ID, linked gap when applicable, and next action without exposing owner-only notes, full source text, or other employees’ questions.
 
-**Safety gate:** unapproved or rejected knowledge cannot support an employee-visible answer, even when it appears relevant.
+**Safety gate:** unapproved, rejected, conflicting, superseded, out-of-scope, source-broken, or decision-broken material cannot support an answer. Employee-selected sensitivity fails closed, and no later gate can override an earlier safety outcome.
+
+## Phase 3: owner handles an escalation
+
+1. The owner opens `/escalations` and sees open items first with urgency, topic, request type, safe question summary, reason, explicit destination, minimized structured context, matching rule/boundary, related gap, activity trace, and gate trace.
+2. The owner may assign the escalation to a label, record a resolution summary, resolve it, and close it only through typed lifecycle transitions.
+3. The owner may navigate to the related question or gap and start source/interview/review work if the operating system needs improvement.
+4. Re-evaluating an already evaluated question does not duplicate its immutable evaluation, answer, open escalation, gap link, or activity sequence.
+5. Resolution does not edit the question or answer, approve or create a claim, change approval history, or resolve/dismiss a gap.
+
+**Safety gate:** an operational resolution becomes reusable company guidance only through later source-backed claim review and an explicit approval decision.
 
 ## Future: work improves the system
 
@@ -79,13 +93,13 @@ employee question
 
 The gap keeps its triggering question, escalation, and evidence condition. A proposal keeps its sources and generated origin. Owner approval creates or supersedes a knowledge revision; it does not mutate the proposal into a different provenance category.
 
-## Future: owner resolves missing or conflicting information
+## Future: a deficiency becomes approved system improvement
 
-1. The owner opens an escalation with its question, attempted evidence, and authority context.
-2. RelayOS labels the condition as missing, conflicting, sensitive, low-confidence, or out-of-authority.
-3. The owner supplies or identifies source material and chooses the operational resolution.
-4. RelayOS drafts a linked improvement proposal.
-5. The normal review path applies; closing the escalation alone does not approve knowledge.
+1. The owner follows a genuine gap from its question and eligibility evaluation into source intake or the deterministic interviewer.
+2. The owner supplies or identifies evidence and creates or edits an unapproved claim without rewriting the historical question outcome.
+3. The normal review path applies and appends an explicit decision for the exact claim version.
+4. Correct same-topic approval may resolve the gap through existing reconciliation and may support a later new question.
+5. Closing the escalation alone never approves knowledge, resolves the gap, or changes the historical answer.
 
 ## Future: employee practices and independence is reviewed
 

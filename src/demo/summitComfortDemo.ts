@@ -1,15 +1,21 @@
 import {
   OPERATIONAL_TOPICS,
+  PhaseOneService,
   numberSourceLines,
   operationalRiskPriority,
   ownerInterviewLocator,
   sourceDocumentLocator,
+  type ApprovalDecision,
+  type DomainResult,
+  type EmployeeQuestionInput,
+  type KnowledgeClaim,
   type KnowledgeGap,
-  type PhaseOneService,
   type PhaseOneSnapshot,
+  type QuestionEvaluationOutcome,
   type SourceDocument,
   type SourceReference,
 } from '../domain';
+import { InMemoryPhaseOneRepository } from '../infrastructure';
 
 export const SUMMIT_COMFORT_DEMO_COMPANY_ID = 'demo-company-summit-comfort';
 export const SUMMIT_COMFORT_DEMO_ROLE_ID = 'demo-role-office-manager-dispatcher';
@@ -18,6 +24,7 @@ const CREATED_AT = '2026-08-01T12:00:00.000Z';
 const APPROVED_AT = '2026-08-01T12:15:00.000Z';
 const REJECTED_AT = '2026-08-01T12:20:00.000Z';
 const ANSWERED_AT = '2026-08-01T12:25:00.000Z';
+const PHASE_THREE_KNOWLEDGE_AT = '2026-08-01T12:30:00.000Z';
 
 const JOB_DESCRIPTION_V1 = [
   'Coordinate incoming calls and maintain the service schedule.',
@@ -195,6 +202,145 @@ const DEMO_ANCHORED_REFERENCES: readonly SourceReference[] = [
   },
 ];
 
+const PHASE_THREE_SOURCE_REFERENCES: readonly SourceReference[] = [
+  {
+    id: 'demo-source-phase-three-scheduling-policy',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    sourceTitle: 'Same-day scheduling authority note (fictional)',
+    sourceType: 'owner-note',
+    sourceLocator: 'Manual entry: Phase 3 scheduling policy, section 1',
+    excerpt:
+      'The dispatcher may move a non-emergency appointment within the same service day when the customer and technician are notified.',
+    recordedAt: PHASE_THREE_KNOWLEDGE_AT,
+  },
+  {
+    id: 'demo-source-phase-three-payment-limit',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    sourceTitle: 'Payment adjustment authority note (fictional)',
+    sourceType: 'owner-note',
+    sourceLocator: 'Manual entry: Phase 3 payment policy, section 1',
+    excerpt:
+      'The dispatcher may waive a payment-processing fee up to USD 100; larger amounts require owner approval.',
+    recordedAt: PHASE_THREE_KNOWLEDGE_AT,
+  },
+  {
+    id: 'demo-source-phase-three-pricing-current',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    sourceTitle: 'Current diagnostic estimate note (fictional)',
+    sourceType: 'owner-note',
+    sourceLocator: 'Manual entry: Phase 3 pricing note, current',
+    excerpt: 'The standard diagnostic estimate is USD 89 before approved additions.',
+    recordedAt: PHASE_THREE_KNOWLEDGE_AT,
+  },
+  {
+    id: 'demo-source-phase-three-pricing-conflict',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    sourceTitle: 'Unresolved diagnostic estimate note (fictional)',
+    sourceType: 'owner-note',
+    sourceLocator: 'Manual entry: Phase 3 pricing note, unresolved',
+    excerpt: 'The standard diagnostic estimate is USD 79.',
+    recordedAt: PHASE_THREE_KNOWLEDGE_AT,
+  },
+];
+
+const PHASE_THREE_KNOWLEDGE_CLAIMS: readonly KnowledgeClaim[] = [
+  {
+    id: 'demo-claim-phase-three-scheduling-guidance',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    statement:
+      'A dispatcher may move a non-emergency appointment within the same service day after notifying the customer and technician.',
+    category: 'decision-rule',
+    provenance: 'owner-authored',
+    lifecycleStatus: 'approved',
+    sourceReferenceIds: ['demo-source-phase-three-scheduling-policy'],
+    createdAt: PHASE_THREE_KNOWLEDGE_AT,
+    updatedAt: PHASE_THREE_KNOWLEDGE_AT,
+    version: 1,
+    topicKey: 'scheduling',
+  },
+  {
+    id: 'demo-claim-phase-three-payment-limit',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    statement:
+      'A dispatcher may waive a payment-processing fee up to USD 100; a larger amount requires owner approval.',
+    category: 'authority-boundary',
+    provenance: 'owner-authored',
+    lifecycleStatus: 'approved',
+    sourceReferenceIds: ['demo-source-phase-three-payment-limit'],
+    createdAt: PHASE_THREE_KNOWLEDGE_AT,
+    updatedAt: PHASE_THREE_KNOWLEDGE_AT,
+    version: 1,
+    topicKey: 'payments',
+  },
+  {
+    id: 'demo-claim-phase-three-pricing-current',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    statement: 'The standard diagnostic estimate is USD 89 before approved additions.',
+    category: 'general',
+    provenance: 'owner-authored',
+    lifecycleStatus: 'approved',
+    sourceReferenceIds: ['demo-source-phase-three-pricing-current'],
+    createdAt: PHASE_THREE_KNOWLEDGE_AT,
+    updatedAt: PHASE_THREE_KNOWLEDGE_AT,
+    version: 1,
+    topicKey: 'pricing-and-estimates',
+  },
+  {
+    id: 'demo-claim-phase-three-pricing-conflict',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    statement: 'The standard diagnostic estimate is USD 79.',
+    category: 'general',
+    provenance: 'source-extracted',
+    lifecycleStatus: 'conflicting-information',
+    sourceReferenceIds: [
+      'demo-source-phase-three-pricing-current',
+      'demo-source-phase-three-pricing-conflict',
+    ],
+    createdAt: PHASE_THREE_KNOWLEDGE_AT,
+    updatedAt: PHASE_THREE_KNOWLEDGE_AT,
+    version: 1,
+    topicKey: 'pricing-and-estimates',
+  },
+];
+
+const PHASE_THREE_APPROVAL_DECISIONS: readonly ApprovalDecision[] = [
+  {
+    id: 'demo-decision-phase-three-scheduling',
+    claimId: 'demo-claim-phase-three-scheduling-guidance',
+    decision: 'approve',
+    actorLabel: 'Fictional owner',
+    reason: 'Matches the fictional same-day scheduling authority note.',
+    decidedAt: PHASE_THREE_KNOWLEDGE_AT,
+    claimVersion: 1,
+  },
+  {
+    id: 'demo-decision-phase-three-payment-limit',
+    claimId: 'demo-claim-phase-three-payment-limit',
+    decision: 'approve',
+    actorLabel: 'Fictional owner',
+    reason: 'Matches the fictional structured payment limit.',
+    decidedAt: PHASE_THREE_KNOWLEDGE_AT,
+    claimVersion: 1,
+  },
+  {
+    id: 'demo-decision-phase-three-pricing-current',
+    claimId: 'demo-claim-phase-three-pricing-current',
+    decision: 'approve',
+    actorLabel: 'Fictional owner',
+    reason: 'Confirms the current fictional diagnostic estimate while retaining the conflict.',
+    decidedAt: PHASE_THREE_KNOWLEDGE_AT,
+    claimVersion: 1,
+  },
+];
+
 function demoGapSupport(topicKey: KnowledgeGap['topicKey']): {
   readonly relatedClaimIds: readonly string[];
   readonly supportingSourceReferenceIds: readonly string[];
@@ -292,11 +438,8 @@ function createDemoInterviewQuestions(): PhaseOneSnapshot['interviewQuestions'] 
   });
 }
 
-/**
- * Creates a fresh copy of the fixed Phase 1 fixture. Every name, locator,
- * statement, contact detail, identifier, and timestamp is fictional.
- */
-export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
+/** Creates the fixed Phase 1-3 seed before deterministic question evaluation. */
+function createSummitComfortDemoSeed(): PhaseOneSnapshot {
   return {
     company: {
       id: SUMMIT_COMFORT_DEMO_COMPANY_ID,
@@ -371,6 +514,56 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
             'No discount, waived fee, or service credit may be promised without written owner approval.',
           escalationDestination: 'Owner',
           notes: 'Record the customer concern and requested remedy before escalation.',
+          topicKeys: ['discounts'],
+          applicableRequestTypes: ['exception-request'],
+        },
+        {
+          id: 'demo-boundary-phase-three-scheduling-decision',
+          roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+          subject: 'Same-day non-emergency rescheduling decision',
+          permissionLevel: 'may-decide',
+          limitOrConstraint:
+            'May decide a same-day non-emergency move after notifying the customer and technician.',
+          escalationDestination: 'Service manager',
+          notes: 'This structured binding does not apply to emergencies or capacity exceptions.',
+          topicKeys: ['scheduling'],
+          applicableRequestTypes: ['decision-request'],
+        },
+        {
+          id: 'demo-boundary-phase-three-payment-limit',
+          roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+          subject: 'Payment-processing fee adjustments',
+          permissionLevel: 'may-act-within-limit',
+          limitOrConstraint: 'May waive up to USD 100; larger amounts require owner approval.',
+          escalationDestination: 'Owner',
+          notes: 'The limit is represented structurally and is never parsed from this note.',
+          topicKeys: ['payments'],
+          applicableRequestTypes: ['financial-action'],
+          numericLimit: 100,
+          currency: 'USD',
+          structuredConstraintType: 'amount-limit',
+        },
+        {
+          id: 'demo-boundary-phase-three-complaint-escalation',
+          roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+          subject: 'Customer complaint remedy decisions',
+          permissionLevel: 'must-escalate',
+          limitOrConstraint: 'The service manager decides any remedy outside approved guidance.',
+          escalationDestination: 'Service manager',
+          notes: 'The dispatcher records the concern without promising a remedy.',
+          topicKeys: ['customer-complaints'],
+          applicableRequestTypes: ['decision-request'],
+        },
+        {
+          id: 'demo-boundary-phase-three-refund-prohibited',
+          roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+          subject: 'Direct customer refunds',
+          permissionLevel: 'prohibited',
+          limitOrConstraint: 'The dispatcher must not issue a refund directly.',
+          escalationDestination: 'Owner',
+          notes: 'A prohibition is an outcome, not a knowledge gap.',
+          topicKeys: ['refunds'],
+          applicableRequestTypes: ['financial-action'],
         },
       ],
       escalationRules: [
@@ -385,6 +578,9 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
             'Customer name, service address, callback number, reported hazard, and whether everyone has left the building',
           expectedResponse:
             'Stop routine troubleshooting, direct the caller to safety guidance, and notify the on-call owner immediately.',
+          topicKeys: ['urgency-and-emergency'],
+          applicableRequestTypes: ['emergency-action'],
+          urgencyMatch: 'immediate',
         },
         {
           id: 'demo-escalation-capacity',
@@ -397,6 +593,22 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
             'Open calls, customer commitments, technician locations, skill requirements, and remaining arrival windows',
           expectedResponse:
             'The service manager chooses the priority order, reassignment, overtime, or rescheduling response.',
+          topicKeys: ['scheduling'],
+          applicableRequestTypes: ['customer-commitment'],
+        },
+        {
+          id: 'demo-escalation-phase-three-sensitive-payment-data',
+          roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+          trigger: 'An employee marks a customer-data question as containing payment data.',
+          destination: 'Fictional privacy lead',
+          urgency: 'immediate',
+          requiredContext:
+            'Operational topic, request type, and sensitivity category only; do not copy payment values',
+          expectedResponse:
+            'The privacy lead supplies the approved handling path without requesting raw payment values.',
+          topicKeys: ['customer-data-and-privacy'],
+          applicableRequestTypes: ['policy-lookup'],
+          sensitivityCategories: ['payment-data'],
         },
       ],
       createdAt: CREATED_AT,
@@ -459,6 +671,7 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
         excerpt: 'No after-hours service is offered.',
         recordedAt: ANSWERED_AT,
       },
+      ...PHASE_THREE_SOURCE_REFERENCES,
     ],
     knowledgeClaims: [
       {
@@ -533,6 +746,7 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
         version: 1,
         topicKey: 'after-hours',
       },
+      ...PHASE_THREE_KNOWLEDGE_CLAIMS,
     ],
     approvalDecisions: [
       {
@@ -553,6 +767,7 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
         decidedAt: REJECTED_AT,
         claimVersion: 1,
       },
+      ...PHASE_THREE_APPROVAL_DECISIONS,
     ],
     knowledgeGaps: createDemoKnowledgeGaps(),
     interviewQuestions: createDemoInterviewQuestions(),
@@ -571,7 +786,194 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
         generatedClaimId: 'demo-claim-after-hours-interview',
       },
     ],
+    employeeQuestions: [],
+    answerEligibilityEvaluations: [],
+    answers: [],
+    escalations: [],
+    activityEvents: [],
   };
+}
+
+const PHASE_THREE_QUESTION_INPUTS: readonly EmployeeQuestionInput[] = [
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'What is the approved guidance for a reported safety hazard?',
+    topicKey: 'urgency-and-emergency',
+    requestType: 'policy-lookup',
+    sensitivitySelection: 'none',
+    structuredContext: { requestType: 'policy-lookup' },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I move this non-emergency appointment within the same service day?',
+    topicKey: 'scheduling',
+    requestType: 'decision-request',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'decision-request',
+      proposedAction: 'Move a non-emergency appointment within the same service day',
+      subject: 'Fictional appointment',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I waive a fictional payment-processing fee of USD 75?',
+    topicKey: 'payments',
+    requestType: 'financial-action',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'financial-action',
+      actionType: 'waive-fee',
+      amount: 75,
+      currency: 'USD',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I waive a fictional payment-processing fee of USD 125?',
+    topicKey: 'payments',
+    requestType: 'financial-action',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'financial-action',
+      actionType: 'waive-fee',
+      amount: 125,
+      currency: 'USD',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I make a fictional exception to the discount rule?',
+    topicKey: 'discounts',
+    requestType: 'exception-request',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'exception-request',
+      requestedException: 'Apply a discount without prior written approval',
+      reason: 'Fictional service-recovery request',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I choose a remedy for this fictional customer complaint?',
+    topicKey: 'customer-complaints',
+    requestType: 'decision-request',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'decision-request',
+      proposedAction: 'Choose a customer complaint remedy',
+      subject: 'Fictional complaint',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I issue a fictional USD 25 refund directly?',
+    topicKey: 'refunds',
+    requestType: 'financial-action',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'financial-action',
+      actionType: 'refund',
+      amount: 25,
+      currency: 'USD',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'What is the approved lead-intake procedure?',
+    topicKey: 'lead-intake',
+    requestType: 'procedure-lookup',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'procedure-lookup',
+      currentStepLabel: 'New request received',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'What diagnostic estimate should I communicate?',
+    topicKey: 'pricing-and-estimates',
+    requestType: 'policy-lookup',
+    sensitivitySelection: 'none',
+    structuredContext: { requestType: 'policy-lookup' },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'How should I route a payment-data question without including payment values?',
+    topicKey: 'customer-data-and-privacy',
+    requestType: 'policy-lookup',
+    sensitivitySelection: 'payment-data',
+    structuredContext: { requestType: 'policy-lookup' },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I promise service availability for this fictional request?',
+    topicKey: 'urgency-and-emergency',
+    requestType: 'customer-commitment',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'customer-commitment',
+      commitmentType: 'service-availability',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'How should I route a fictional immediate gas-odor report?',
+    topicKey: 'urgency-and-emergency',
+    requestType: 'emergency-action',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'emergency-action',
+      urgency: 'immediate',
+      emergencyCategory: 'gas-odor',
+    },
+  },
+];
+
+function successful<T>(result: DomainResult<T>): T {
+  if (!result.ok) throw result.error;
+  return result.value;
+}
+
+/**
+ * Creates fresh deterministic Phase 0-3 records. Every name, locator,
+ * statement, question, identifier, and timestamp is fictional.
+ */
+export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
+  const repository = new InMemoryPhaseOneRepository();
+  const idCounts = new Map<string, number>();
+  let clockTick = 0;
+  const service = new PhaseOneService(repository, {
+    clock: () => new Date(Date.UTC(2026, 7, 1, 13, 0, clockTick++)).toISOString(),
+    idFactory: (prefix) => {
+      const next = (idCounts.get(prefix) ?? 0) + 1;
+      idCounts.set(prefix, next);
+      return `demo-phase-three-${prefix}-${next}`;
+    },
+    ownerFallbackDestination: 'Fictional owner',
+  });
+
+  successful(service.initializeSnapshot(createSummitComfortDemoSeed()));
+  successful(service.reconcileKnowledgeGaps());
+  const outcomes: QuestionEvaluationOutcome[] = PHASE_THREE_QUESTION_INPUTS.map((input) => {
+    const question = successful(service.submitEmployeeQuestion(input));
+    return successful(service.evaluateEmployeeQuestion(question.id));
+  });
+
+  const resolvedExample = outcomes.at(-1)?.escalation;
+  if (resolvedExample === undefined) {
+    throw new Error('The deterministic resolved-escalation example was not created.');
+  }
+  successful(service.assignEscalation(resolvedExample.id, 'Fictional on-call owner'));
+  successful(
+    service.resolveEscalation(
+      resolvedExample.id,
+      'The fictional owner handled this one request; the resolution is not company policy.',
+      'Fictional on-call owner',
+    ),
+  );
+
+  return service.getSnapshot();
 }
 
 /** Installs the fixed fixture through the same validated service used by the UI. */

@@ -19,7 +19,7 @@ function cloneValue<T>(value: T): T {
 }
 
 /**
- * Session-only Phase 1 storage. Both sides of the boundary are copied so a
+ * Session-only Phase 0-3 storage. Both sides of the boundary are copied so a
  * caller cannot mutate repository state without a domain operation.
  */
 export class InMemoryPhaseOneRepository implements PhaseOneRepository {

@@ -81,6 +81,11 @@ function activeSnapshot(overrides: Partial<PhaseOneSnapshot> = {}): PhaseOneSnap
     knowledgeGaps: [],
     interviewQuestions: [],
     interviewAnswers: [],
+    employeeQuestions: [],
+    answerEligibilityEvaluations: [],
+    answers: [],
+    escalations: [],
+    activityEvents: [],
     ...overrides,
   };
 }

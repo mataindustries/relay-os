@@ -132,11 +132,12 @@ describe('critical Phase 1 application journeys', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Owner' }));
     expect(screen.getByText('3 responsibilities')).toBeInTheDocument();
-    expect(screen.getByText('5 knowledge claims')).toBeInTheDocument();
+    expect(screen.getByText('9 knowledge claims')).toBeInTheDocument();
   });
 
   it('records owner approval and rejection interactions with append-only reasons', () => {
     const service = createDemoService();
+    const initialDecisionCount = service.getSnapshot().approvalDecisions.length;
     const proposed = claimWithStatus(service, 'proposed');
     const conflicting = claimWithStatus(service, 'conflicting-information');
     renderApp('/review', service);
@@ -172,7 +173,7 @@ describe('critical Phase 1 application journeys', () => {
     expect(snapshot.knowledgeClaims.find(({ id }) => id === conflicting.id)?.lifecycleStatus).toBe(
       'rejected',
     );
-    expect(snapshot.approvalDecisions).toHaveLength(4);
+    expect(snapshot.approvalDecisions).toHaveLength(initialDecisionCount + 2);
     expect(snapshot.approvalDecisions.at(-2)?.reason).toContain('arrival-window');
     expect(snapshot.approvalDecisions.at(-1)?.reason).toContain('conflict');
   });

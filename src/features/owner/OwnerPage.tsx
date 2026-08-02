@@ -92,7 +92,7 @@ export function OwnerPage() {
   if (company === null || role === null) {
     return (
       <section className="workspace-page" aria-labelledby="owner-title">
-        <p className="phase-label">Phase 2 · Owner workspace</p>
+        <p className="phase-label">Phase 3 · Owner workspace</p>
         <h1 id="owner-title">No role is active yet</h1>
         <p>Complete the session-only setup or load the fictional HVAC demonstration first.</p>
         <Link className="text-link" to="/setup">
@@ -113,7 +113,7 @@ export function OwnerPage() {
   return (
     <div className="workspace-page">
       <header className="workspace-header">
-        <p className="phase-label">Phase 2 · Owner workspace</p>
+        <p className="phase-label">Phase 3 · Owner workspace</p>
         <h1>{company.name}</h1>
         <p className="workspace-lede">
           Current session records for the one supported company and operational role.
@@ -161,6 +161,13 @@ export function OwnerPage() {
           <span>{snapshot.sourceDocuments.length} source versions</span>
           <span>{knowledgeClaims.length} knowledge claims</span>
           <span>
+            {
+              snapshot.escalations.filter(({ status }) => ['open', 'assigned'].includes(status))
+                .length
+            }{' '}
+            active escalations
+          </span>
+          <span>
             {snapshot.knowledgeGaps.filter(({ status }) => status !== 'resolved').length} open or
             historical gaps
           </span>
@@ -192,6 +199,9 @@ export function OwnerPage() {
           </label>
         </div>
         <div className="button-row">
+          <Link className="secondary-link" to="/escalations">
+            Open escalation queue
+          </Link>
           <Link className="secondary-link" to="/sources">
             Open Source Library
           </Link>
@@ -215,7 +225,11 @@ export function OwnerPage() {
                     : state === coverageFilter,
               )
               .map((entry) => (
-                <article className="coverage-card" key={entry.topic.key}>
+                <article
+                  className="coverage-card"
+                  id={entry.gap ? `gap-${entry.gap.id}` : undefined}
+                  key={entry.topic.key}
+                >
                   <div className="record-card-heading">
                     <span className={`coverage-state coverage-${entry.state}`}>{entry.state}</span>
                     <span className={`risk-badge risk-${entry.topic.riskTier}`}>

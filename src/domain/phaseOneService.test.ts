@@ -139,6 +139,11 @@ const snapshot = (overrides: Partial<PhaseOneSnapshot> = {}): PhaseOneSnapshot =
   knowledgeGaps: [],
   interviewQuestions: [],
   interviewAnswers: [],
+  employeeQuestions: [],
+  answerEligibilityEvaluations: [],
+  answers: [],
+  escalations: [],
+  activityEvents: [],
   ...overrides,
 });
 

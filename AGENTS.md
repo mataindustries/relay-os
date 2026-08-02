@@ -6,16 +6,16 @@ RelayOS helps a business owner transfer one operational role to an employee as a
 
 ## Current scope
 
-Phase 2 is the current completed scope: session-only source intake and a deterministic Knowledge Gap Interviewer for the one company and its single Home-Service Office Manager / Dispatcher role. It adds immutable manual-paste source versions, exact line anchors, explicit operational-topic coverage, reconciled knowledge gaps, deterministic interview questions, and interview-derived unapproved claims while preserving the Phase 1 approval and employee-visibility boundaries. Data lives only in memory for the current page session.
+Phase 3 is the current completed scope: a session-only deterministic Question-to-System policy firewall for the one company and its single Home-Service Office Manager / Dispatcher role. It adds structured employee questions, explicit answer-eligibility gates, cited approved-only answers, fail-closed outcomes, traceable escalations, genuine question-linked gaps, and append-only activity events while preserving the completed Phase 1 and Phase 2 approval, source, coverage, interview, and employee-visibility boundaries. Data lives only in memory for the current page session.
 
-Before changing code, read [the execution-plan guide](docs/exec-plans/README.md) and the plan relevant to the change. The completed [Phase 2: Source Intake and Knowledge Gap Interviewer](docs/exec-plans/phase-2-source-intake-interviewer.md), [Phase 1 company and role engine](docs/exec-plans/phase-1-company-role-engine.md), and [Phase 0 foundation](docs/exec-plans/phase-0-foundation.md) record the current baseline. No later phase is active; do not implement one early even if a future entity or flow is documented.
+Before changing code, read [the execution-plan guide](docs/exec-plans/README.md) and the plan relevant to the change. The completed [Phase 3: Deterministic Question-to-System](docs/exec-plans/phase-3-question-to-system.md), [Phase 2: Source Intake and Knowledge Gap Interviewer](docs/exec-plans/phase-2-source-intake-interviewer.md), [Phase 1 company and role engine](docs/exec-plans/phase-1-company-role-engine.md), and [Phase 0 foundation](docs/exec-plans/phase-0-foundation.md) record the current baseline. No later phase is active; do not begin Phase 4 even if a future entity or flow is documented.
 
 ## Enforceable invariants
 
 1. Employee-visible answers use only approved knowledge.
 2. Generated or inferred content remains visibly unapproved.
 3. Approved knowledge retains its sources and append-only approval history.
-4. Missing, conflicting, sensitive, or low-confidence evidence causes escalation, never invention.
+4. Missing, conflicting, sensitive, provenance-invalid, or unclear-authority conditions fail closed, never invent.
 5. Approval history is append-only.
 6. Independence scores come from visible components, never a language model.
 7. Browser code contains no API secrets.
@@ -30,7 +30,7 @@ See [Architecture](ARCHITECTURE.md) for the normative rules and enforcement poin
 - `src/app/` — application composition, routes, and shell
 - `src/domain/` — framework-free domain rules and types
 - `src/features/` — feature-owned setup, review, owner, and employee UI
-- `src/infrastructure/` — Phase 2 session-only in-memory repository adapter; later external adapters require a plan
+- `src/infrastructure/` — Phase 3 session-only in-memory repository adapter; later external adapters require a plan
 - `src/shared/` — small cross-feature UI and utilities
 - `src/demo/` — deterministic, no-API demonstration data or adapters
 - `src/test/` — shared test setup and helpers
@@ -72,3 +72,5 @@ Use npm and commit `package-lock.json`. Prefer the complete `npm run check` befo
 - [Foundation decision](docs/decisions/0001-foundation.md)
 - [Phase 1 engine decision](docs/decisions/0002-company-role-engine.md)
 - [Phase 2 source and gap decision](docs/decisions/0003-deterministic-source-and-gap-engine.md)
+- [Phase 3 policy firewall decision](docs/decisions/0004-deterministic-question-policy-firewall.md)
+- [Completed Phase 3 execution plan](docs/exec-plans/phase-3-question-to-system.md)

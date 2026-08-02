@@ -1,12 +1,12 @@
 # RelayOS domain model
 
-This is the canonical domain vocabulary. It is not a database schema and does not authorize implementation beyond the active [execution plan](../exec-plans/README.md). Phase 2 implements the entities explicitly labeled below while preserving the completed Phase 1 entities; the remaining entities describe later V1 boundaries. Exact types may evolve, but approval, provenance, versioning, and visibility semantics are architectural constraints.
+This is the canonical domain vocabulary. It is not a database schema and does not authorize implementation beyond the active [execution plan](../exec-plans/README.md). Phase 3 implements the entities explicitly labeled below while preserving the completed Phase 1 and Phase 2 entities; the remaining entities describe later V1 boundaries. Exact types may evolve, but approval, provenance, versioning, deterministic eligibility, and visibility semantics are architectural constraints.
 
 ## Shared concepts
 
-Every record has an immutable identifier and the company/role scope, timestamps, and version fields relevant to that record. Phase 2 continues to operate with exactly one company and one Home-Service Office Manager / Dispatcher role, but it validates explicit IDs to prevent cross-scope relationships.
+Every record has an immutable identifier and the company/role scope, timestamps, and version fields relevant to that record. Phase 3 continues to operate with exactly one company and one Home-Service Office Manager / Dispatcher role, but it validates explicit IDs to prevent cross-scope relationships.
 
-`KnowledgeClaim.lifecycleStatus` remains one of `extracted`, `proposed`, `approved`, `rejected`, `missing-information`, `conflicting-information`, or `superseded`. Phase 2 adds an optional explicit operational-topic key and `owner-interview-derived` provenance without changing what approval means. `provenance` records how the statement arose and never implies approval. Only the domain service may make lifecycle transitions; invalid transitions return a typed domain error. Approval requires source references plus a separately appended `ApprovalDecision`.
+`KnowledgeClaim.lifecycleStatus` remains one of `extracted`, `proposed`, `approved`, `rejected`, `missing-information`, `conflicting-information`, or `superseded`. Phase 2 added an optional explicit operational-topic key and `owner-interview-derived` provenance without changing what approval means. Phase 3 retrieves by that explicit topic and does not inspect claim or question wording. `provenance` records how the statement arose and never implies approval. Only the domain service may make lifecycle transitions; invalid transitions return a typed domain error. Approval requires source references plus a separately appended `ApprovalDecision`.
 
 The permitted lifecycle graph is deliberately small:
 
@@ -29,8 +29,12 @@ The required distinctions are structural:
 - **Rejected knowledge:** a retained rejected revision plus its rejection decision.
 - **Missing information:** `KnowledgeGap.reason = missing-evidence`.
 - **Conflicting information:** linked claims/references plus `KnowledgeGap.reason = conflicting-evidence`.
+- **Employee input:** an immutable `EmployeeQuestion`; it is operational context, not evidence or policy.
+- **Eligibility result:** an immutable `AnswerEligibilityEvaluation` containing explicit gate records, never hidden model reasoning.
+- **Answer:** an immutable deterministic outcome that cites eligible knowledge or safely records why delivery was withheld; it is not policy.
+- **Escalation resolution:** an operational lifecycle record; it neither creates nor approves knowledge.
 
-Other mandatory escalation reasons include sensitive evidence, evidence below a configured confidence threshold, and action outside authority. A confidence value never bypasses an approval requirement.
+Employee-selected sensitivity, a known mandatory rule, missing or invalid evidence, and action outside structured authority can require escalation. No confidence score participates in Phase 3 eligibility, and question text is not parsed to infer any of these conditions.
 
 ## Organization and identity
 
@@ -103,51 +107,62 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 - **Relationships:** Used by procedures, answers, scenarios, and escalations; may be constrained by authority boundaries.
 - **Provenance:** Approved rules require source references, supporting claims, and approval decisions; inferred conditions remain unapproved.
 
-### AuthorityBoundary (Phase 1 role definition)
+### AuthorityBoundary (Phase 1 role definition, Phase 3 structured binding)
 
 - **Purpose:** States what the employee may decide or do and where owner involvement begins.
-- **Important fields:** `id`, `roleId`, `subject`, constrained `permissionLevel`, `limitOrConstraint`, `escalationDestination`, and optional `notes`. Permission is `may-decide`, `may-act-within-limit`, `must-request-approval`, `must-escalate`, or `prohibited`.
-- **Relationships:** Must belong to the active role; later procedures, answers, responsibilities, and training scenarios may be constrained by it.
-- **Lifecycle:** Created and edited during the Phase 1 role setup session; publishing versioned boundaries is future work.
-- **Provenance:** Phase 1 treats it as explicitly owner-entered role context, not approved employee-visible knowledge. Ambiguous guidance still cannot bypass claim review or escalation rules.
+- **Important fields:** `id`, `roleId`, `subject`, constrained `permissionLevel`, `limitOrConstraint`, `escalationDestination`, optional `notes`, and optional Phase 3 bindings: explicit topic keys, applicable request types, numeric limit, currency, and structured constraint type. Permission is `may-decide`, `may-act-within-limit`, `must-request-approval`, `must-escalate`, or `prohibited`.
+- **Relationships:** Must belong to the active role. Phase 3 action evaluation considers only boundaries explicitly bound to the selected topic and request type. `may-decide` cannot authorize financial or emergency requests or an amount-bearing commitment. `may-act-within-limit` requires compatible structured amount/currency data, and the smallest of several compatible limits governs; limits are never parsed from `limitOrConstraint`.
+- **Lifecycle:** Existing unbound Phase 1 records remain valid. They may be retained and displayed as owner context but cannot deterministically authorize a Phase 3 action request. Publishing versioned boundaries is future work.
+- **Provenance:** A matching structured boundary can constrain authority or ground an escalation/prohibition, but it does not supply substantive answer guidance and does not bypass approved-claim retrieval.
 
-### EscalationRule (Phase 1 role definition)
+### EscalationRule (Phase 1 role definition, Phase 3 structured binding)
 
 - **Purpose:** Defines when, why, and to whom work must be escalated.
-- **Important fields:** `id`, `roleId`, `trigger`, `destination`, constrained `urgency`, `requiredContext`, `expectedResponse`.
-- **Relationships:** Must belong to the active role. Future questions, procedure steps, authority boundaries, and scenarios may evaluate it; Phase 1 does not create an `Escalation`.
-- **Lifecycle:** Created and edited during the Phase 1 role setup session; published rule revisions are future work.
-- **Provenance:** Phase 1 records an explicit owner-authored rule definition, not source-backed employee-visible knowledge. A later published rule must retain sources and approval decisions.
+- **Important fields:** `id`, `roleId`, `trigger`, `destination`, constrained `urgency`, `requiredContext`, `expectedResponse`, and optional Phase 3 topic keys, applicable request types, urgency match, and sensitivity categories.
+- **Relationships:** Must belong to the active role. Phase 3 matches only explicit structured bindings, orders matches deterministically, and uses the recorded destination and required context. It never infers a recipient from trigger text.
+- **Lifecycle:** Existing unbound Phase 1 records remain valid but cannot deterministically route a Phase 3 question. Published rule revisions are future work.
+- **Provenance:** A matching rule can ground a known escalation outcome but cannot supply answer guidance, create approved knowledge, or manufacture a gap merely because it routes work correctly.
 
 ## Operational loop
 
-### EmployeeQuestion
+### EmployeeQuestion (Phase 3)
 
-- **Purpose:** Records an employee’s request for operational guidance.
-- **Important fields:** text, employee, role scope, submitted time, sensitivity flags, status; lifecycle is `received -> answered|escalated -> closed`.
-- **Relationships:** May produce an answer, escalation, knowledge gap, and activity events.
-- **Provenance:** The original question and later edits are retained as user input; it is context, not approved knowledge.
+- **Purpose:** Retains an employee’s structured request for operational guidance without treating free text as policy or a retrieval query.
+- **Important fields:** `id`, company/role scope, `employeeLabel`, original `questionText`, explicit `topicKey`, `requestType`, `sensitivitySelection`, discriminated `structuredContext`, `status`, submission/closure times, correlation ID, and an optional correction link. Request type is `policy-lookup`, `procedure-lookup`, `decision-request`, `exception-request`, `financial-action`, `emergency-action`, or `customer-commitment`. Sensitivity is explicitly selected from `none`, customer personal data, credentials/access, payment data, health/safety, legal/regulatory, or other sensitive.
+- **Relationships:** Belongs to the active company and role and may produce one eligibility evaluation, answer, escalation, gap link, and correlated activity events. Context is discriminated by request type: for example, financial actions carry structural action type, amount, and currency; emergency actions carry urgency and category.
+- **Lifecycle:** `received -> evaluating -> answered|withheld|escalated -> closed` through typed transitions. Evaluation makes the question immutable. A correction appends a new linked question rather than rewriting history.
+- **Provenance:** Original employee input and explicit selections are retained as context, not approved knowledge. Structured fields are validated directly; RelayOS never derives them from `questionText`.
 
-### Answer
+### AnswerEligibilityEvaluation (Phase 3)
 
-- **Purpose:** Records a response grounded in approved company knowledge or records that an answer was withheld.
-- **Important fields:** response text, cited knowledge revisions, generation/origin label, eligibility result, status; lifecycle is `draft -> delivered|withheld|escalated`.
-- **Relationships:** Belongs to a question and may trigger an escalation or gap.
-- **Provenance:** Every substantive delivered statement traces to approved revisions and their source references; generated wording remains labeled generated and never becomes policy.
+- **Purpose:** Records the deterministic, inspectable policy-firewall decision for one question.
+- **Important fields:** `id`, `questionId`, evaluation time, `overallResult`, ordered `gateResults`, eligible claim/source-reference/approval-decision IDs, matching authority-boundary/escalation-rule IDs, optional withhold reason, and correlation ID. Overall result is answer eligible, escalation required, prohibited, or withheld for missing knowledge, conflicting knowledge, invalid provenance, sensitivity, unclear authority, or unsupported request.
+- **Relationships:** Uses current employee-visible same-topic claims and explicit scope, conflict, sensitivity, authority, and escalation records. It is referenced by the immutable answer and owner gate trace.
+- **Lifecycle:** Created once for a question and never edited. Re-evaluation of an already evaluated question returns the existing result and appends nothing.
+- **Provenance:** The ten gate records are, in order, scope, topic, request context, current approved knowledge, provenance, explicit conflict, sensitivity, authority, escalation rule, and answer mode. Each records `pass`, `fail`, or `not-applicable`, a safe reason, and supporting record IDs. This is explicit rule/data trace, not model reasoning or a confidence score.
 
-### Escalation
+### Answer (Phase 3)
 
-- **Purpose:** Routes a question or action to an authorized person when RelayOS cannot safely answer.
-- **Important fields:** reason, urgency, context, assignee, status, resolution; lifecycle is `open -> assigned -> resolved -> closed`.
-- **Relationships:** Links the triggering question, rules/boundaries checked, evidence inspected, gap, and any later proposal.
-- **Provenance:** Retains the exact evidence condition and source/knowledge references checked; a resolution is not knowledge approval.
+- **Purpose:** Records fixed-template cited guidance or the exact prohibited, withheld, or escalated outcome delivered for a question.
+- **Important fields:** `id`, question/company/role scope, status, answer mode, response text, cited claim/source-reference/approval-decision/authority-boundary IDs, eligibility evaluation ID, creation/delivery times, optional withheld reason, and correlation ID. Status is `delivered`, `withheld`, `escalated`, or `prohibited`; mode is approved guidance, approved guidance with authority, known escalation, prohibited action, or withheld.
+- **Relationships:** Belongs to one question/evaluation. Delivered guidance uses only claims admitted by the employee selector and eligibility gates. A prohibited or known-escalation result links the exact matching boundary/rule; a withheld result may link an escalation and genuine gap.
+- **Lifecycle:** Immutable after creation. Stable claim ordering and fixed labels/templates compose sections such as approved company guidance, authority for this request, sources, and owner approval.
+- **Provenance:** Every substantive delivered statement traces to cited current approved claims, exact source references, and exact-version approval decisions. Informational guidance explicitly does not authorize action. An answer is an outcome record and never becomes company policy.
 
-### KnowledgeGap (Phase 2 topic coverage)
+### Escalation (Phase 3)
 
-- **Purpose:** Makes missing, incomplete, explicitly conflicting, or unclear-authority evidence in the canonical role-topic catalog actionable.
-- **Important fields:** `id`, company/role scope, `topicKey`, constrained `reason`, description, impact, risk tier, status, supporting source-reference IDs, related claim IDs, timestamps, and optional resolution/dismissal details. Lifecycle is `open -> question-ready -> answered -> proposal-created -> resolved`, with permitted reasoned dismissal paths.
-- **Relationships:** At most one active unresolved gap exists per scoped topic. Deterministic reconciliation creates or updates gaps from explicit claim/topic records; an approved current same-topic claim may resolve one. Rejection and dismissal never approve knowledge.
-- **Provenance:** Links explicit sources and claims. Missing evidence is stated rather than inferred; absence of an active gap is not a compliance or quality claim.
+- **Purpose:** Routes a question to an explicit authorized destination when RelayOS cannot safely deliver or authorize an answer.
+- **Important fields:** `id`, company/role/question scope, reason, urgency, destination, minimized required context, status, creation/assignment/resolution times, resolution summary and actor label, related gap ID, matching boundary/rule IDs, and correlation ID. Reasons include approval required, mandatory escalation, emergency, sensitive context, unclear authority, missing/conflicting knowledge, invalid provenance, and unsupported request.
+- **Relationships:** Destination comes only from a matching structured rule/boundary or explicitly configured owner fallback. Required context comes from typed fields and omits unnecessary raw sensitive values. Re-evaluation reuses the same open escalation.
+- **Lifecycle:** `open -> assigned -> resolved -> closed` through typed transitions; history is retained.
+- **Provenance:** Resolution is operational history, not policy evidence. It does not create or approve a claim, edit a question/answer, alter approval history, or resolve/dismiss a gap. Later source/interview/review work remains a separate linked workflow.
+
+### KnowledgeGap (Phase 2 topic coverage, Phase 3 question linkage)
+
+- **Purpose:** Makes a genuine topic-scoped operating-system deficiency actionable. Phase 3 adds question/evaluation linkage without treating every escalation as missing knowledge.
+- **Important fields:** `id`, company/role scope, `topicKey`, constrained `reason`, description, impact, risk tier, status, supporting source-reference IDs, related claim IDs, triggering question IDs, evaluation IDs, timestamps, and optional resolution/dismissal details. Reasons cover missing/incomplete/conflicting evidence, invalid provenance, unclear authority, and unsupported request. Lifecycle remains `open -> question-ready -> answered -> proposal-created -> resolved`, with permitted reasoned dismissal paths.
+- **Relationships:** At most one active unresolved gap exists per scoped topic. A Phase 3 question reuses the active scoped-topic gap where appropriate and links its immutable question/evaluation. Existing reconciliation resolves a question-linked gap only when current approved evidence also passes the gates relevant to its original missing, conflict, provenance, unsupported-mode, or authority deficiency; an unrelated same-topic approval is insufficient. Escalation resolution does not resolve it.
+- **Provenance:** The original deficiency reason remains accurate and links explicit sources, claims, questions, and evaluations. A known approval, mandatory escalation, emergency, sensitivity-handling, or prohibition rule creates no gap merely because it correctly routes or restricts work. Absence of an active gap is not a compliance or quality claim.
 
 ### InterviewQuestion (Phase 2)
 
@@ -209,17 +224,18 @@ Other mandatory escalation reasons include sensitive evidence, evidence below a 
 - **Relationships:** Derives from approved responsibility coverage, scenario attempts, operational events, and appropriate escalations.
 - **Provenance:** Links every input record and formula version. It is deterministically calculated and never generated, adjusted, or guessed by a language model.
 
-### ActivityEvent
+### ActivityEvent (Phase 3)
 
-- **Purpose:** Provides an append-only audit record of meaningful domain activity.
-- **Important fields:** event type, actor, occurred time, entity ID/revision, correlation ID, safe metadata; it is append-only.
-- **Relationships:** Can reference any entity and connect a question-to-approval trace.
-- **Provenance:** It records who/what/when but is not policy evidence by itself; events about evidence or publication link the applicable sources and decisions.
+- **Purpose:** Provides an append-only trace of meaningful Question-to-System and escalation activity in the current session.
+- **Important fields:** `id`, company/role scope, event type, entity type/ID, actor label, occurrence time, correlation ID, and safe metadata. Phase 3 event types cover question receipt/evaluation, answer delivery/withholding, escalation open/assign/resolve/close, and gap linkage.
+- **Relationships:** Correlation connects a question, evaluation, answer, escalation, and gap without copying full entity payloads. Demo IDs, times, content, and ordering are deterministic.
+- **Lifecycle:** Append-only; no update or delete operation exists.
+- **Provenance:** It records who/what/when but is not policy evidence or analytics. Metadata contains no raw question text, source content, sensitive values, or invented explanation.
 
-## Required visibility predicate
+## Required visibility and answer-eligibility predicate
 
-In Phase 2, the Phase 1 predicate is unchanged: a claim may appear on the employee route only when its exact version is `approved`, it matches the active company and role, every cited source reference resolves, its explicit approval decision is present, and no successfully approved revision has superseded it. `extracted`, `proposed`, `rejected`, `missing-information`, `conflicting-information`, and `superseded` claims are always excluded. Documents, gaps, interview questions, and raw answers are not employee records.
+The Phase 1 employee selector remains the first boundary: a claim may appear on the employee route or enter a Phase 3 answer only when its exact version is `approved`, it matches the active company and role, every cited source reference resolves, its exact-version approval decision is present, and no successfully approved revision has superseded it. `extracted`, `proposed`, `rejected`, `missing-information`, `conflicting-information`, and `superseded` claims are always excluded. Documents, gaps, interview records, other employees’ questions, owner-only context, and full source text are not employee answer context.
 
-A future answer may use only claims that pass this selector plus the not-yet-implemented sensitivity, confidence, authority, and escalation gates. All conditions fail closed. Phase 2 still demonstrates retrieval eligibility only; it does not accept employee questions or generate answers.
+Phase 3 then restricts retrieval to the employee-selected explicit topic and applies the ten deterministic gates. It independently rejects explicit same-topic conflict, employee-selected sensitivity, invalid provenance, unsupported answer mode, and action requests without compatible structured authority. Matching prohibition or escalation records determine their grounded outcomes; no confidence score or semantic inference participates. Only `answer-eligible` may deliver approved guidance, and informational guidance always states that it does not grant action authority. All conditions fail closed.
 
 See [Architecture](../../ARCHITECTURE.md), [AI boundaries](AI_BOUNDARIES.md), and [data flow](DATA_FLOW.md).

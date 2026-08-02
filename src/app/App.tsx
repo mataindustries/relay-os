@@ -2,6 +2,7 @@ import { NavLink, Outlet, Route, Routes } from 'react-router-dom';
 
 import type { PhaseOneService } from '../domain';
 import { EmployeePage } from '../features/employee';
+import { EscalationsPage } from '../features/escalations';
 import { InterviewPage } from '../features/interview';
 import { OwnerPage } from '../features/owner';
 import { ReviewPage } from '../features/review';
@@ -16,6 +17,7 @@ const navigation = [
   { to: '/', label: 'Home' },
   { to: '/setup', label: 'Setup' },
   { to: '/owner', label: 'Owner' },
+  { to: '/escalations', label: 'Escalations' },
   { to: '/sources', label: 'Sources' },
   { to: '/interview', label: 'Interview' },
   { to: '/employee', label: 'Employee' },
@@ -53,7 +55,7 @@ function AppShell() {
         <Outlet />
       </main>
       <footer className="site-footer">
-        <p>RelayOS · Phase 2 source and gap interview engine · session-only</p>
+        <p>RelayOS · Phase 3 deterministic question policy firewall · session-only</p>
       </footer>
     </div>
   );
@@ -66,6 +68,7 @@ function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="/setup" element={<SetupRoute />} />
         <Route path="/owner" element={<OwnerPage />} />
+        <Route path="/escalations" element={<EscalationsPage />} />
         <Route path="/sources" element={<SourcePage />} />
         <Route path="/interview" element={<InterviewPage />} />
         <Route path="/employee" element={<EmployeePage />} />
@@ -75,7 +78,7 @@ function AppRoutes() {
           element={
             <FuturePhasePage
               title="Training"
-              description="Training scenarios and assessment remain outside Phase 2. No training activity or scoring is available."
+              description="Training scenarios and assessment remain outside Phase 3. No training activity or scoring is available."
             />
           }
         />
@@ -84,7 +87,7 @@ function AppRoutes() {
           element={
             <FuturePhasePage
               title="Settings"
-              description="Durable settings, identity, and production configuration remain outside Phase 2."
+              description="Durable settings, identity, and production configuration remain outside Phase 3."
             />
           }
         />

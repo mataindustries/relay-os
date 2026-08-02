@@ -657,6 +657,26 @@ button:focus-visible,
   background: #e4e7e5;
 }
 
+.status-delivered,
+.status-resolved,
+.status-closed {
+  color: #125849;
+  background: #dceee7;
+}
+
+.status-escalated,
+.status-open,
+.status-assigned {
+  color: #745416;
+  background: #f7ebc8;
+}
+
+.status-withheld,
+.status-prohibited {
+  color: #87352e;
+  background: #f5dfdc;
+}
+
 .empty-state {
   padding: 1rem;
   border: 1px dashed #b9c6c0;
@@ -975,6 +995,307 @@ pre {
   background: #edf5f1;
 }
 
+.employee-warning-stack {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+}
+
+.sensitive-data-warning,
+.professional-advice-warning {
+  max-width: 54rem;
+  padding: 1rem 1.15rem;
+  border-left: 0.28rem solid #a33f34;
+  background: #fff2f0;
+}
+
+.professional-advice-warning {
+  border-color: #657773;
+  background: #eef2f0;
+}
+
+.employee-question-workspace {
+  max-width: 54rem;
+}
+
+.employee-question-form {
+  margin-top: 1.25rem;
+}
+
+.structured-context-fields {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #cbd8d2;
+  background: #f8faf8;
+}
+
+.structured-context-fields legend {
+  padding-inline: 0.35rem;
+  color: #102f2a;
+  font-weight: 750;
+}
+
+.question-amount-fields,
+.question-outcome-summary,
+.answer-provenance-grid,
+.escalation-summary-grid,
+.question-record-grid,
+.context-item-list {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.correction-notice {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-left: 0.28rem solid #237263;
+  background: #edf5f1;
+}
+
+.question-result {
+  max-width: 58rem;
+  border-left-width: 0.35rem;
+}
+
+.question-result-delivered {
+  border-left-color: #237263;
+}
+
+.question-result-escalated {
+  border-left-color: #c28b2c;
+}
+
+.question-result-withheld,
+.question-result-prohibited {
+  border-left-color: #a33f34;
+}
+
+.question-result .phase-label {
+  margin-bottom: 0;
+}
+
+.question-outcome-summary,
+.escalation-summary-grid,
+.question-record-grid,
+.context-item-list {
+  margin: 1rem 0 0;
+}
+
+.question-outcome-summary > div,
+.escalation-summary-grid > div,
+.question-record-grid > div,
+.context-item-list > div {
+  min-width: 0;
+  padding: 0.8rem;
+  background: #f1f5f2;
+}
+
+.question-outcome-summary dt,
+.escalation-summary-grid dt,
+.question-record-grid dt,
+.context-item-list dt {
+  color: #53615e;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.question-outcome-summary dd,
+.escalation-summary-grid dd,
+.question-record-grid dd,
+.context-item-list dd {
+  margin: 0.25rem 0 0;
+}
+
+.answer-guidance,
+.answer-citations,
+.answer-authority,
+.answer-provenance-grid,
+.employee-escalation-summary,
+.question-system-status {
+  min-width: 0;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #d8e0dc;
+}
+
+.answer-guidance > p {
+  white-space: pre-line;
+}
+
+.answer-citations ul,
+.answer-authority ul,
+.gate-reason-list {
+  padding-left: 1.25rem;
+}
+
+.answer-provenance-grid > div {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #d8e0dc;
+  background: #fbfcfb;
+}
+
+.answer-provenance-grid ul {
+  margin-bottom: 0;
+  padding-left: 1.1rem;
+}
+
+.answer-provenance-grid li {
+  margin-bottom: 0.7rem;
+}
+
+.answer-provenance-grid li span {
+  display: block;
+  color: #66736f;
+}
+
+.employee-escalation-summary {
+  padding: 1rem;
+  border: 1px solid #e2c57f;
+  background: #fff9e9;
+}
+
+.question-system-status p:last-child {
+  margin-bottom: 0;
+}
+
+.question-history-list,
+.escalation-queue,
+.gate-trace-list,
+.activity-trace-list {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.question-history-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #d5dfda;
+  border-radius: 0.3rem;
+  background: #fbfcfb;
+}
+
+.question-history-card h3 {
+  margin-top: 0.85rem;
+}
+
+.escalation-card {
+  min-width: 0;
+  padding: clamp(1rem, 4vw, 1.6rem);
+  scroll-margin-top: 1rem;
+  border: 1px solid #cbd8d2;
+  border-left: 0.35rem solid #81918c;
+  border-radius: 0.35rem;
+  background: #ffffff;
+}
+
+.escalation-card-open,
+.escalation-card-assigned {
+  border-left-color: #c28b2c;
+}
+
+.escalation-card-resolved,
+.escalation-card-closed {
+  border-left-color: #237263;
+}
+
+.related-question-record,
+.escalation-context,
+.matching-records,
+.related-gap-summary,
+.resolution-record,
+.escalation-trace-section,
+.escalation-actions,
+.remediation-links {
+  min-width: 0;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #d8e0dc;
+}
+
+.related-question-record summary {
+  cursor: pointer;
+  color: #176658;
+  font-weight: 700;
+}
+
+.matching-records ul {
+  padding-left: 1.25rem;
+}
+
+.gate-trace-item {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid #d8e0dc;
+  background: #fbfcfb;
+}
+
+.gate-trace-item p:last-child {
+  margin-bottom: 0;
+}
+
+.trace-status {
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.trace-pass {
+  color: #125849;
+  background: #dceee7;
+}
+
+.trace-fail {
+  color: #87352e;
+  background: #f5dfdc;
+}
+
+.trace-not-applicable {
+  color: #5b6260;
+  background: #e4e7e5;
+}
+
+.activity-trace-list li {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+  padding-left: 0.85rem;
+  border-left: 0.2rem solid #adc2b9;
+}
+
+.escalation-actions {
+  max-width: 34rem;
+}
+
+.escalation-actions .stacked-form + .stacked-form {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #d8e0dc;
+}
+
+.remediation-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
 .future-page {
   max-width: 44rem;
   padding-top: clamp(1rem, 8vw, 5rem);
@@ -1052,6 +1373,15 @@ pre {
   }
 
   .interview-rationale {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .question-amount-fields,
+  .question-outcome-summary,
+  .answer-provenance-grid,
+  .escalation-summary-grid,
+  .question-record-grid,
+  .context-item-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
