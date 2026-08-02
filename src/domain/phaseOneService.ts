@@ -204,6 +204,31 @@ export class PhaseOneService {
     return domainSuccess(this.getSnapshot());
   }
 
+  resetFictionalDemoSnapshot(
+    seed: PhaseOneSnapshot,
+    expectedScope: { readonly companyId: string; readonly roleId: string },
+  ): DomainResult<PhaseOneSnapshot> {
+    const validation = validatePhaseOneSnapshot(seed);
+    if (!validation.ok) return validation;
+
+    const current = this.getSnapshot();
+    if (
+      current.company?.id !== expectedScope.companyId ||
+      current.role?.id !== expectedScope.roleId ||
+      seed.company?.id !== expectedScope.companyId ||
+      seed.role?.id !== expectedScope.roleId
+    ) {
+      return domainFailure(
+        'invalid-transition',
+        'Only the active fixed fictional demonstration may be reset.',
+      );
+    }
+
+    if (snapshotsMatch(current, seed)) return domainSuccess(current);
+    this.repository.replaceSnapshot(seed);
+    return domainSuccess(this.getSnapshot());
+  }
+
   activateSetup(input: ActivateSetupInput): DomainResult<PhaseOneSnapshot> {
     const current = this.getSnapshot();
     if (!isEmptySnapshot(current)) {

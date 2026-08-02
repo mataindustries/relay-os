@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const operatingLoop = [
   'An employee asks an operational question.',
   'RelayOS retrieves approved company knowledge.',
@@ -12,16 +14,24 @@ export function HomePage() {
   return (
     <div className="home-page">
       <section className="hero" aria-labelledby="home-title">
-        <p className="phase-label">Phase 3 · Deterministic Question-to-System</p>
+        <p className="phase-label">Phase 4 · Pilot Launch Package</p>
         <h1 id="home-title">RelayOS</h1>
         <p className="positioning">Transfer the role, not just the instructions.</p>
         <p className="hero-summary">
-          RelayOS now evaluates structured employee questions through a deterministic policy
-          firewall, delivering cited approved guidance or an explicit fail-closed outcome.
+          RelayOS packages its deterministic, source-backed role-transfer loop for a clear fictional
+          demonstration and hands-on founding-client delivery.
         </p>
-        <a className="text-link" href="#operating-loop">
-          See the reviewed operating loop
-        </a>
+        <div className="button-row">
+          <Link className="primary-link" to="/pilot">
+            View the founding pilot
+          </Link>
+          <Link className="secondary-link" to="/demo">
+            Start the fictional demo
+          </Link>
+          <a className="text-link" href="#operating-loop">
+            See the reviewed operating loop
+          </a>
+        </div>
       </section>
 
       <section className="principle" aria-labelledby="approved-title">
@@ -38,9 +48,10 @@ export function HomePage() {
         <p className="eyebrow">Current operating architecture</p>
         <h2 id="loop-title">A reviewed learning loop</h2>
         <p className="section-intro">
-          Phase 3 connects structured employee questions to approved knowledge, explicit authority
-          and escalation records, genuine knowledge gaps, and the existing owner-controlled review
-          cycle. No model decides whether an answer is eligible.
+          The completed Phase 3 engine connects structured employee questions to approved knowledge,
+          explicit authority and escalation records, genuine knowledge gaps, and the
+          owner-controlled review cycle. Phase 4 adds only the pilot presentation and manual
+          delivery package. No model decides whether an answer is eligible.
         </p>
         <ol className="loop-list">
           {operatingLoop.map((step) => (
@@ -52,9 +63,9 @@ export function HomePage() {
       <section className="phase-note" aria-labelledby="phase-title">
         <h2 id="phase-title">What exists today</h2>
         <p>
-          Phase 3 supports session-only role setup, source-backed approval, deterministic gap
-          interviews, structured employee questions, cited outcomes, and an owner escalation queue.
-          Reloading clears all data.
+          Phase 4 supports a public fictional pilot demonstration plus session-only role setup,
+          source-backed approval, deterministic gap interviews, structured employee questions, cited
+          outcomes, report/manual printing, and a minimized JSON handoff. Reloading clears all data.
         </p>
         <p>
           Models, semantic search, uploads, authentication, persistence, automated messaging,

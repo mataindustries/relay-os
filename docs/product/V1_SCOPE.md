@@ -4,7 +4,7 @@
 
 The planned V1 transfers one operational role for one company: **Home-Service Office Manager / Dispatcher**. It builds a reviewed body of role knowledge, uses that knowledge to support an employee, and returns unresolved work to the owner as explicit escalations and improvement proposals.
 
-“Planned V1” describes the product boundary, not permission to begin a later phase. Phase 3 implements the completed company/role/review and source/gap-interviewer foundations plus the first deterministic employee Question-to-System and owner-escalation vertical slice described below.
+“Planned V1” describes the product boundary, not permission to begin a later phase. Phase 4 packages the completed Phase 1–3 company/role, source/gap-interviewer, employee Question-to-System, and owner-escalation engine for an honest founding-client demonstration and manual delivery. It does not authorize Phase 5 or production infrastructure.
 
 ## Planned V1 capabilities
 
@@ -56,7 +56,7 @@ Phase 2 adds:
 
 Phase 2 did not provide AI/model behavior, automatic document interpretation or extraction, semantic retrieval, chat, employee questions or answers, file uploads or parsing, authentication, durable or browser persistence, Cloudflare data services, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure.
 
-## Current Phase 3 boundary
+## Completed Phase 3 boundary
 
 Phase 3 adds:
 
@@ -71,4 +71,17 @@ Phase 3 adds:
 
 Phase 3 remains a current-page-session demonstration. It does not provide a model or model gateway, natural-language classification, semantic search, embeddings, RAG, free-form answer generation, automatic sensitivity or authority detection, network requests, messaging, file upload/parsing, authentication, durable or browser persistence, protected storage, multi-company/multi-role behavior, training, scoring, analytics, or production infrastructure. `/training` and `/settings` remain informational placeholders.
 
-See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [active plan](../exec-plans/phase-3-question-to-system.md).
+## Current Phase 4 pilot-launch boundary
+
+Phase 4 adds:
+
+- a public `/pilot` explanation with fixed founding-client offers, honest limitations, and a configurable public booking or email action;
+- a phone-usable `/demo` that loads, summarizes, and narrowly resets only the deterministic fictional Summit Comfort records, including discount and technician-late examples;
+- a print-ready Role Transfer Report built from actual current-session records and an Operating Manual summary whose guidance comes only from the existing approved employee-visible selector;
+- a deterministic allowlisted JSON handoff download that excludes raw source text and raw sensitive question values by default, with a separately confirmed source-text option and no import;
+- owner-facing intake and delivery checklists whose completion state is local to the rendered page; and
+- an honest founding-pilot sales, intake, delivery, and case-study documentation package.
+
+Phase 4 remains a static, unauthenticated, current-page-session tool. Public demo records are fictional only. Other routes are directly navigable and therefore must not receive confidential real-client material in a public deployment. A controlled private environment is required for any real pilot work until a later paid-pilot-driven plan adds identity, authorization, durable persistence, and protected delivery. Phase 4 adds no model calls, browser persistence, Cloudflare data services, billing, integrations, analytics, or full procedure generator. `/training` and `/settings` remain informational placeholders.
+
+See [Product](PRODUCT.md), [User journeys](USER_JOURNEYS.md), [Architecture](../../ARCHITECTURE.md), and the [Phase 4 plan](../exec-plans/phase-4-pilot-launch-package.md).

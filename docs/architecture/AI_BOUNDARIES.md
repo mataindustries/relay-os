@@ -2,7 +2,7 @@
 
 ## Current state
 
-Phase 3 makes no model calls, installs no AI SDK, and has no prompt, autonomous ingestion, semantic retrieval, or generation pipeline. Source text is pasted manually; owners choose exact lines, topics, and candidate wording. Employees explicitly select topic, request type, sensitivity, and typed context. The policy firewall retrieves only by explicit records, evaluates fixed gates, and composes answers from fixed templates. No model participates in question classification, retrieval, eligibility, policy, authority, escalation, sensitivity, citations, or answer composition. Any model behavior below is a constraint for a later approved execution plan.
+Phase 4 makes no model calls, installs no AI SDK, and has no prompt, autonomous ingestion, semantic retrieval, or generation pipeline. Source text is pasted manually; owners choose exact lines, topics, and candidate wording. Employees explicitly select topic, request type, sensitivity, and typed context. The policy firewall retrieves only by explicit records, evaluates fixed gates, and composes answers from fixed templates. Demo summaries, reports, manual organization, priorities, and export are deterministic projections of stored records. No model participates in question classification, retrieval, eligibility, policy, authority, escalation, sensitivity, citations, answer composition, reporting, or handoff packaging. Any model behavior below is a constraint for a later approved execution plan.
 
 ## Future boundary
 
@@ -47,8 +47,8 @@ The completed Phase 1 lifecycle, Phase 2 source/interviewer additions, and Phase
 
 ## Deterministic demonstration mode
 
-Phase 3 extends the fixed fictional HVAC company and role with seeded structured employee questions, every required eligibility outcome, cited deterministic answers, escalations, genuine gap links, and append-only traces. Repeated loading is idempotent, and every outcome uses the same selector, gates, repository, and lifecycle operations as session-entered records. It performs no network or model request and never labels fixture text as live or automatically understood.
+Phase 4 extends the fixed fictional HVAC company and role with demonstrable discount and technician-late cases while retaining the seeded structured employee questions, required eligibility outcomes, cited deterministic answers, escalations, genuine gap links, and append-only traces. Repeated loading is idempotent, reset is limited to the exact fictional scope, and every outcome uses the same selector, gates, repository, and lifecycle operations as session-entered records. It performs no network or model request and never labels fixture text as live or automatically understood.
 
 ## Verification expectations for later phases
 
-Phase 3 tests cover mixed approved/unapproved retrieval, missing/conflicting/invalid evidence, employee-selected sensitivity, structured authority and limits, explicit escalation routing, citation integrity, append-only activity, idempotency, and deterministic demo results. Later model work must additionally cover gateway failure, forged citations, prompt injection, provider data handling, and confirmation that model wording cannot change the firewall outcome. Security details are in [Security](SECURITY.md); the broader flow is in [Data flow](DATA_FLOW.md).
+Phase 1–4 tests cover mixed approved/unapproved retrieval, missing/conflicting/invalid evidence, employee-selected sensitivity, structured authority and limits, explicit escalation routing, citation integrity, append-only activity, idempotency, deterministic demo results, approved-only manual guidance, and allowlisted export minimization. Later model work must additionally cover gateway failure, forged citations, prompt injection, provider data handling, and confirmation that model wording cannot change the firewall outcome. Security details are in [Security](SECURITY.md); the broader flow is in [Data flow](DATA_FLOW.md).

@@ -19,7 +19,11 @@ import {
   type SourceDocumentUpdates,
   type SourceReferenceInput,
 } from '../domain';
-import { loadSummitComfortDemo, SUMMIT_COMFORT_DEMO_COMPANY_ID } from '../demo';
+import {
+  loadSummitComfortDemo,
+  resetSummitComfortDemo,
+  SUMMIT_COMFORT_DEMO_COMPANY_ID,
+} from '../demo';
 import type { SetupActionResult } from '../features/setup/SetupPage';
 import { createInitialSetupDraft, type SetupDraft } from '../features/setup/setupDraft';
 import { InMemoryPhaseOneRepository } from '../infrastructure';
@@ -28,11 +32,13 @@ import { RelaySessionContext, type RelaySessionValue } from './relaySessionConte
 export interface RelaySessionProviderProps {
   readonly children: ReactNode;
   readonly service?: PhaseOneService | undefined;
+  readonly clock?: (() => string) | undefined;
 }
 
 export function RelaySessionProvider({
   children,
   service: suppliedService,
+  clock: suppliedClock,
 }: RelaySessionProviderProps) {
   const [service] = useState(
     () =>
@@ -43,6 +49,9 @@ export function RelaySessionProvider({
   );
   const [snapshot, setSnapshot] = useState(() => service.getSnapshot());
   const [setupDraft, setSetupDraft] = useState(createInitialSetupDraft);
+  const [currentTime] = useState<() => string>(
+    () => suppliedClock ?? (() => new Date().toISOString()),
+  );
 
   const perform = useCallback(
     <T,>(operation: () => DomainResult<T>): DomainResult<T> => {
@@ -107,6 +116,17 @@ export function RelaySessionProvider({
         ? 'The fictional HVAC demo was already loaded; no records were duplicated.'
         : 'The fictional Summit Comfort Heating & Air demo is active for this page session.',
     };
+  }, [perform, service]);
+
+  const resetDemo = useCallback((): SetupActionResult => {
+    const result = perform(() => resetSummitComfortDemo(service));
+    return result.ok
+      ? {
+          ok: true,
+          message:
+            'The fictional Summit Comfort records were reset. Any changes made to fictional demo records in this page session were discarded.',
+        }
+      : { ok: false, message: result.error.message };
   }, [perform, service]);
 
   const createSourceReference = useCallback(
@@ -221,8 +241,10 @@ export function RelaySessionProvider({
       employeeVisibleKnowledge: selectEmployeeVisibleKnowledge(snapshot),
       coverageResult: evaluateTopicCoverage(snapshot),
       interviewQueue: service.prioritizedInterviewQuestions(),
+      currentTime,
       completeSetup,
       loadDemo,
+      resetDemo,
       createSourceReference,
       createSourceDocument,
       updateSourceDocumentDraft,
@@ -256,9 +278,11 @@ export function RelaySessionProvider({
       createManualExtractedClaim,
       createSourceDocument,
       createSourceReference,
+      currentTime,
       dismissKnowledgeGap,
       generateInterviewQuestions,
       loadDemo,
+      resetDemo,
       reconcileKnowledgeGaps,
       rejectKnowledgeClaim,
       setupDraft,

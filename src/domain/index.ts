@@ -2,6 +2,7 @@ export * from './entities';
 export * from './coverage';
 export * from './employeeVisibility';
 export * from './operationalTopics';
+export * from './pilotDelivery';
 export * from './phaseOneService';
 export * from './questionPolicyFirewall';
 export * from './repositories';

@@ -35,7 +35,9 @@ structured employee question
 -> source and review work may later produce approved knowledge
 ```
 
-Phase 3 implements the first employee-question and owner-escalation segment in current-session memory. Topic, request type, sensitivity, and request context are explicit; question text is retained but never semantically searched or parsed. Answers use fixed templates and only current approved employee-visible claims with exact source and approval provenance. Known approval, escalation, emergency, sensitivity-handling, and prohibition rules do not manufacture gaps. Escalation resolution is not knowledge approval, and later source/interview/review work remains the only route to employee-visible policy. See [V1 scope](V1_SCOPE.md) and the [Phase 3 execution plan](../exec-plans/phase-3-question-to-system.md).
+Phase 3 implements the employee-question and owner-escalation segment in current-session memory. Topic, request type, sensitivity, and request context are explicit; question text is retained but never semantically searched or parsed. Answers use fixed templates and only current approved employee-visible claims with exact source and approval provenance. Known approval, escalation, emergency, sensitivity-handling, and prohibition rules do not manufacture gaps. Escalation resolution is not knowledge approval, and later source/interview/review work remains the only route to employee-visible policy.
+
+Phase 4 wraps that completed deterministic engine in a sellable but deliberately manual founding-client package: a fictional public pilot and guided demo, actual-session print reports, an approved-only manual summary, a minimized handoff export, and explicit intake and delivery checklists. These surfaces make the operating loop demonstrable and deliverable without claiming authentication, protected accounts, durable persistence, automatic procedure generation, or production readiness. See [V1 scope](V1_SCOPE.md), the [Phase 4 execution plan](../exec-plans/phase-4-pilot-launch-package.md), and the [pilot-before-infrastructure decision](../decisions/0005-pilot-before-production-infrastructure.md).
 
 ## Language and boundaries
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import type { KnowledgeClaim, KnowledgeGap, TopicCoverageState } from '../../domain';
 import { useRelaySession } from '../../app/useRelaySession';
+import { PilotExportPanel } from '../delivery';
 
 const REVIEW_STATUSES = new Set(['extracted', 'proposed']);
 const UNRESOLVED_STATUSES = new Set([
@@ -173,6 +174,34 @@ export function OwnerPage() {
           </span>
         </div>
       </section>
+
+      <section
+        className="workspace-section pilot-delivery-tools"
+        aria-labelledby="delivery-tools-title"
+      >
+        <p className="eyebrow">Phase 4 pilot delivery</p>
+        <h2 id="delivery-tools-title">Prepare the current role handoff</h2>
+        <p>
+          Print actual session records, verify the delivery workflow, or export a minimized JSON
+          package. These tools do not add persistence or access control.
+        </p>
+        <div className="button-row">
+          <Link className="primary-link" to="/report">
+            Open Role Transfer Report
+          </Link>
+          <Link className="secondary-link" to="/manual">
+            Open Operating Manual summary
+          </Link>
+          <Link className="secondary-link" to="/pilot/intake">
+            Pilot intake
+          </Link>
+          <Link className="secondary-link" to="/pilot/delivery">
+            Delivery checklist
+          </Link>
+        </div>
+      </section>
+
+      <PilotExportPanel />
 
       <section className="workspace-section coverage-section" aria-labelledby="coverage-title">
         <div className="section-heading-row">

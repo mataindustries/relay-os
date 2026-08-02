@@ -8,8 +8,9 @@ Execution plans are living implementation records. Before changing code, read th
 - [Phase 1: Company and Role Engine](phase-1-company-role-engine.md) — complete; session-only company, role, and approval vertical slice
 - [Phase 2: Source Intake and Knowledge Gap Interviewer](phase-2-source-intake-interviewer.md) — complete; session-only source and gap-interview vertical slice
 - [Phase 3: Deterministic Question-to-System](phase-3-question-to-system.md) — complete; session-only employee question policy firewall and owner escalation vertical slice
+- [Phase 4: Pilot Launch Package](phase-4-pilot-launch-package.md) — complete; public fictional demo and manual founding-client delivery package
 
-Phase 3 is the current completed baseline. No later implementation plan is active. Do not begin Phase 4 or infer permission for AI, persistence, authentication, uploads, messaging, training, or scoring from future product documentation.
+Phase 3 is the completed engine baseline, and Phase 4 is the completed pilot-launch package. No later implementation plan is active. Do not begin Phase 5 or infer permission for AI, persistence, authentication, uploads, messaging, training, scoring, or production infrastructure from future product documentation.
 
 ## Required contents
 

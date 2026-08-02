@@ -42,7 +42,7 @@ const DISPATCH_CHECKLIST = [
 ].join('\n');
 const CUSTOMER_POLICY = [
   'Hazard reports are escalated immediately; office staff do not troubleshoot the hazard.',
-  'Only the owner may authorize a discount, waived fee, or service credit.',
+  'The dispatcher may approve a service-recovery discount up to USD 100; a larger discount requires owner approval.',
   'The current cancellation fee inside 24 hours is $95.',
 ].join('\n');
 
@@ -179,7 +179,8 @@ const DEMO_ANCHORED_REFERENCES: readonly SourceReference[] = [
     sourceTitle: 'Customer handling policy (fictional)',
     sourceType: 'policy',
     sourceLocator: sourceDocumentLocator('demo-document-customer-policy', 1, 2, 2),
-    excerpt: 'Only the owner may authorize a discount, waived fee, or service credit.',
+    excerpt:
+      'The dispatcher may approve a service-recovery discount up to USD 100; a larger discount requires owner approval.',
     recordedAt: CREATED_AT,
     sourceDocumentId: 'demo-document-customer-policy',
     sourceDocumentVersion: 1,
@@ -309,6 +310,21 @@ const PHASE_THREE_KNOWLEDGE_CLAIMS: readonly KnowledgeClaim[] = [
     version: 1,
     topicKey: 'pricing-and-estimates',
   },
+  {
+    id: 'demo-claim-phase-four-discount-limit',
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+    statement:
+      'A dispatcher may approve a service-recovery discount up to USD 100; a larger discount requires owner approval.',
+    category: 'authority-boundary',
+    provenance: 'owner-authored',
+    lifecycleStatus: 'approved',
+    sourceReferenceIds: ['demo-source-policy-discount-anchor'],
+    createdAt: PHASE_THREE_KNOWLEDGE_AT,
+    updatedAt: PHASE_THREE_KNOWLEDGE_AT,
+    version: 1,
+    topicKey: 'discounts',
+  },
 ];
 
 const PHASE_THREE_APPROVAL_DECISIONS: readonly ApprovalDecision[] = [
@@ -336,6 +352,15 @@ const PHASE_THREE_APPROVAL_DECISIONS: readonly ApprovalDecision[] = [
     decision: 'approve',
     actorLabel: 'Fictional owner',
     reason: 'Confirms the current fictional diagnostic estimate while retaining the conflict.',
+    decidedAt: PHASE_THREE_KNOWLEDGE_AT,
+    claimVersion: 1,
+  },
+  {
+    id: 'demo-decision-phase-four-discount-limit',
+    claimId: 'demo-claim-phase-four-discount-limit',
+    decision: 'approve',
+    actorLabel: 'Fictional owner',
+    reason: 'Confirms the written fictional service-recovery discount limit.',
     decidedAt: PHASE_THREE_KNOWLEDGE_AT,
     claimVersion: 1,
   },
@@ -424,7 +449,7 @@ function createDemoInterviewQuestions(): PhaseOneSnapshot['interviewQuestions'] 
       status:
         topic.key === 'after-hours'
           ? ('answered' as const)
-          : topic.key === 'discounts'
+          : topic.key === 'lead-intake'
             ? ('active' as const)
             : ('queued' as const),
       createdAt: CREATED_AT,
@@ -511,11 +536,25 @@ function createSummitComfortDemoSeed(): PhaseOneSnapshot {
           subject: 'Customer discounts and service credits',
           permissionLevel: 'must-request-approval',
           limitOrConstraint:
-            'No discount, waived fee, or service credit may be promised without written owner approval.',
+            'Any exception above the structured discount limit requires written owner approval.',
           escalationDestination: 'Owner',
-          notes: 'Record the customer concern and requested remedy before escalation.',
+          notes: 'Record the customer concern and requested exception before escalation.',
           topicKeys: ['discounts'],
           applicableRequestTypes: ['exception-request'],
+        },
+        {
+          id: 'demo-boundary-phase-four-discount-limit',
+          roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+          subject: 'Service-recovery discounts',
+          permissionLevel: 'may-act-within-limit',
+          limitOrConstraint: 'May approve up to USD 100; larger discounts require owner approval.',
+          escalationDestination: 'Owner',
+          notes: 'The amount and currency are structured values, not values parsed from prose.',
+          topicKeys: ['discounts'],
+          applicableRequestTypes: ['financial-action'],
+          numericLimit: 100,
+          currency: 'USD',
+          structuredConstraintType: 'amount-limit',
         },
         {
           id: 'demo-boundary-phase-three-scheduling-decision',
@@ -564,6 +603,18 @@ function createSummitComfortDemoSeed(): PhaseOneSnapshot {
           notes: 'A prohibition is an outcome, not a knowledge gap.',
           topicKeys: ['refunds'],
           applicableRequestTypes: ['financial-action'],
+        },
+        {
+          id: 'demo-boundary-phase-four-late-commitment',
+          roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+          subject: 'Exact arrival promises when a technician is late',
+          permissionLevel: 'must-request-approval',
+          limitOrConstraint:
+            'The dispatcher may share the current revised window but may not promise an exact arrival time or compensation.',
+          escalationDestination: 'Service manager',
+          notes: 'The service manager decides commitments beyond the approved update guidance.',
+          topicKeys: ['technician-late-or-absent'],
+          applicableRequestTypes: ['customer-commitment'],
         },
       ],
       escalationRules: [
@@ -638,7 +689,8 @@ function createSummitComfortDemoSeed(): PhaseOneSnapshot {
         sourceTitle: 'Service recovery authority note (fictional)',
         sourceType: 'owner-note',
         sourceLocator: 'Manual entry: owner policy note, section 3',
-        excerpt: 'Only the owner may authorize a discount, waived fee, or service credit.',
+        excerpt:
+          'The dispatcher may approve a service-recovery discount up to USD 100; a larger discount requires owner approval.',
         recordedAt: CREATED_AT,
       },
       {
@@ -697,10 +749,10 @@ function createSummitComfortDemoSeed(): PhaseOneSnapshot {
           'Contact the customer with a revised arrival window whenever a technician will arrive more than 30 minutes late.',
         category: 'procedure',
         provenance: 'generated-like',
-        lifecycleStatus: 'proposed',
+        lifecycleStatus: 'approved',
         sourceReferenceIds: ['demo-source-checklist-late-anchor'],
         createdAt: CREATED_AT,
-        updatedAt: CREATED_AT,
+        updatedAt: APPROVED_AT,
         version: 1,
         topicKey: 'technician-late-or-absent',
       },
@@ -763,8 +815,18 @@ function createSummitComfortDemoSeed(): PhaseOneSnapshot {
         claimId: 'demo-claim-discount-authority',
         decision: 'reject',
         actorLabel: 'Fictional owner',
-        reason: 'The source reserves all discount and credit decisions for the owner.',
+        reason:
+          'The source records a currency limit and does not authorize an uncapped percentage.',
         decidedAt: REJECTED_AT,
+        claimVersion: 1,
+      },
+      {
+        id: 'demo-decision-approve-late-customer-update',
+        claimId: 'demo-claim-late-customer-update',
+        decision: 'approve',
+        actorLabel: 'Fictional owner',
+        reason: 'Matches the exact fictional dispatch checklist lines.',
+        decidedAt: APPROVED_AT,
         claimVersion: 1,
       },
       ...PHASE_THREE_APPROVAL_DECISIONS,
@@ -928,6 +990,53 @@ const PHASE_THREE_QUESTION_INPUTS: readonly EmployeeQuestionInput[] = [
       emergencyCategory: 'gas-odor',
     },
   },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I approve a fictional USD 75 customer service-recovery discount?',
+    topicKey: 'discounts',
+    requestType: 'financial-action',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'financial-action',
+      actionType: 'discount',
+      amount: 75,
+      currency: 'USD',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText: 'May I approve a fictional USD 125 customer service-recovery discount?',
+    topicKey: 'discounts',
+    requestType: 'financial-action',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'financial-action',
+      actionType: 'discount',
+      amount: 125,
+      currency: 'USD',
+    },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText:
+      'A technician is running late and the fictional customer is upset. What handling guidance is approved?',
+    topicKey: 'technician-late-or-absent',
+    requestType: 'policy-lookup',
+    sensitivitySelection: 'none',
+    structuredContext: { requestType: 'policy-lookup' },
+  },
+  {
+    employeeLabel: 'Fictional dispatcher',
+    questionText:
+      'May I promise the upset fictional customer an exact arrival time while the technician is late?',
+    topicKey: 'technician-late-or-absent',
+    requestType: 'customer-commitment',
+    sensitivitySelection: 'none',
+    structuredContext: {
+      requestType: 'customer-commitment',
+      commitmentType: 'arrival-window',
+    },
+  },
 ];
 
 function successful<T>(result: DomainResult<T>): T {
@@ -960,7 +1069,9 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
     return successful(service.evaluateEmployeeQuestion(question.id));
   });
 
-  const resolvedExample = outcomes.at(-1)?.escalation;
+  const resolvedExample = outcomes.find(
+    ({ question }) => question.structuredContext.requestType === 'emergency-action',
+  )?.escalation;
   if (resolvedExample === undefined) {
     throw new Error('The deterministic resolved-escalation example was not created.');
   }
@@ -979,4 +1090,12 @@ export function createSummitComfortDemoSnapshot(): PhaseOneSnapshot {
 /** Installs the fixed fixture through the same validated service used by the UI. */
 export function loadSummitComfortDemo(service: PhaseOneService) {
   return service.initializeSnapshot(createSummitComfortDemoSnapshot());
+}
+
+/** Replaces only an active Summit Comfort fixture with a fresh validated fixture. */
+export function resetSummitComfortDemo(service: PhaseOneService) {
+  return service.resetFictionalDemoSnapshot(createSummitComfortDemoSnapshot(), {
+    companyId: SUMMIT_COMFORT_DEMO_COMPANY_ID,
+    roleId: SUMMIT_COMFORT_DEMO_ROLE_ID,
+  });
 }

@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { ANSWER_ELIGIBILITY_GATE_ORDER, PhaseOneService, evaluateTopicCoverage } from '../domain';
 import { InMemoryPhaseOneRepository } from '../infrastructure';
-import { createSummitComfortDemoSnapshot, loadSummitComfortDemo } from './summitComfortDemo';
+import {
+  createSummitComfortDemoSnapshot,
+  loadSummitComfortDemo,
+  resetSummitComfortDemo,
+} from './summitComfortDemo';
 
 const ORIGINAL_SOURCE_IDS = [
   'demo-source-safety-note',
@@ -19,7 +23,7 @@ const ORIGINAL_SOURCE_IDS = [
   'demo-source-interview-after-hours',
 ] as const;
 
-const EXPECTED_PHASE_THREE_RESULTS = [
+const EXPECTED_DEMO_RESULTS = [
   'answer-eligible',
   'answer-eligible',
   'answer-eligible',
@@ -31,6 +35,10 @@ const EXPECTED_PHASE_THREE_RESULTS = [
   'withheld-conflicting-knowledge',
   'withheld-sensitive',
   'withheld-authority-unclear',
+  'escalation-required',
+  'answer-eligible',
+  'escalation-required',
+  'answer-eligible',
   'escalation-required',
 ] as const;
 
@@ -51,10 +59,12 @@ describe('Summit Comfort demonstration record', () => {
     expect(snapshot.role?.authorityBoundaries.map(({ id }) => id)).toEqual([
       'demo-boundary-schedule-adjustments',
       'demo-boundary-discounts',
+      'demo-boundary-phase-four-discount-limit',
       'demo-boundary-phase-three-scheduling-decision',
       'demo-boundary-phase-three-payment-limit',
       'demo-boundary-phase-three-complaint-escalation',
       'demo-boundary-phase-three-refund-prohibited',
+      'demo-boundary-phase-four-late-commitment',
     ]);
     expect(snapshot.role?.escalationRules.map(({ id }) => id)).toEqual([
       'demo-escalation-safety-hazard',
@@ -62,7 +72,11 @@ describe('Summit Comfort demonstration record', () => {
       'demo-escalation-phase-three-sensitive-payment-data',
     ]);
     expect(snapshot.role?.authorityBoundaries[0]?.topicKeys).toBeUndefined();
-    expect(snapshot.role?.authorityBoundaries[3]).toMatchObject({
+    expect(
+      snapshot.role?.authorityBoundaries.find(
+        ({ id }) => id === 'demo-boundary-phase-three-payment-limit',
+      ),
+    ).toMatchObject({
       permissionLevel: 'may-act-within-limit',
       numericLimit: 100,
       currency: 'USD',
@@ -79,7 +93,7 @@ describe('Summit Comfort demonstration record', () => {
     expect(snapshot.sourceReferences.map(({ id }) => id).slice(0, 12)).toEqual(ORIGINAL_SOURCE_IDS);
     expect(
       snapshot.knowledgeClaims.slice(0, 5).map(({ lifecycleStatus }) => lifecycleStatus),
-    ).toEqual(['approved', 'proposed', 'rejected', 'conflicting-information', 'proposed']);
+    ).toEqual(['approved', 'approved', 'rejected', 'conflicting-information', 'proposed']);
     expect(snapshot.approvalDecisions.slice(0, 2).map(({ decision }) => decision)).toEqual([
       'approve',
       'reject',
@@ -99,20 +113,21 @@ describe('Summit Comfort demonstration record', () => {
       scheduling: 'approved',
       payments: 'approved',
       'pricing-and-estimates': 'approved',
-      'technician-late-or-absent': 'candidate',
+      'technician-late-or-absent': 'approved',
+      discounts: 'approved',
       'rescheduling-and-cancellation': 'conflicting',
       'after-hours': 'candidate',
     });
   });
 
-  it('contains all twelve deterministic policy-firewall examples with complete gate traces', () => {
+  it('preserves all twelve Phase 3 examples and adds four pilot scenarios with complete gate traces', () => {
     const snapshot = createSummitComfortDemoSnapshot();
 
-    expect(snapshot.employeeQuestions).toHaveLength(12);
-    expect(snapshot.answerEligibilityEvaluations).toHaveLength(12);
-    expect(snapshot.answers).toHaveLength(12);
+    expect(snapshot.employeeQuestions).toHaveLength(16);
+    expect(snapshot.answerEligibilityEvaluations).toHaveLength(16);
+    expect(snapshot.answers).toHaveLength(16);
     expect(snapshot.answerEligibilityEvaluations.map(({ overallResult }) => overallResult)).toEqual(
-      EXPECTED_PHASE_THREE_RESULTS,
+      EXPECTED_DEMO_RESULTS,
     );
     for (const evaluation of snapshot.answerEligibilityEvaluations) {
       expect(evaluation.gateResults.map(({ gateKey }) => gateKey)).toEqual(
@@ -134,6 +149,10 @@ describe('Summit Comfort demonstration record', () => {
       'escalated',
       'escalated',
       'escalated',
+      'delivered',
+      'escalated',
+      'delivered',
+      'escalated',
     ]);
     expect(snapshot.answers.map(({ answerMode }) => answerMode)).toEqual([
       'approved-guidance',
@@ -147,6 +166,10 @@ describe('Summit Comfort demonstration record', () => {
       'withheld',
       'withheld',
       'withheld',
+      'known-escalation',
+      'approved-guidance-with-authority',
+      'known-escalation',
+      'approved-guidance',
       'known-escalation',
     ]);
 
@@ -168,6 +191,27 @@ describe('Summit Comfort demonstration record', () => {
       status: 'prohibited',
       citedClaimIds: [],
       citedAuthorityBoundaryIds: ['demo-boundary-phase-three-refund-prohibited'],
+    });
+    expect(snapshot.answers[12]).toMatchObject({
+      status: 'delivered',
+      citedClaimIds: ['demo-claim-phase-four-discount-limit'],
+      citedSourceReferenceIds: ['demo-source-policy-discount-anchor'],
+      citedApprovalDecisionIds: ['demo-decision-phase-four-discount-limit'],
+      citedAuthorityBoundaryIds: ['demo-boundary-phase-four-discount-limit'],
+    });
+    expect(snapshot.answers[13]).toMatchObject({
+      status: 'escalated',
+      citedAuthorityBoundaryIds: ['demo-boundary-phase-four-discount-limit'],
+    });
+    expect(snapshot.answers[14]).toMatchObject({
+      status: 'delivered',
+      citedClaimIds: ['demo-claim-late-customer-update'],
+      citedSourceReferenceIds: ['demo-source-checklist-late-anchor'],
+      citedApprovalDecisionIds: ['demo-decision-approve-late-customer-update'],
+    });
+    expect(snapshot.answers[15]).toMatchObject({
+      status: 'escalated',
+      citedAuthorityBoundaryIds: ['demo-boundary-phase-four-late-commitment'],
     });
 
     snapshot.employeeQuestions.forEach((question, index) => {
@@ -220,7 +264,7 @@ describe('Summit Comfort demonstration record', () => {
     expect(escalationsByQuestion.get(questions[8]!.id)?.relatedGapId).toBe(conflictGap?.id);
     expect(escalationsByQuestion.get(questions[10]!.id)?.relatedGapId).toBe(authorityGap?.id);
 
-    for (const index of [3, 4, 5, 9, 11]) {
+    for (const index of [3, 4, 5, 9, 11, 13, 15]) {
       expect(escalationsByQuestion.get(questions[index]!.id)?.relatedGapId).toBeUndefined();
       expect(
         snapshot.knowledgeGaps.some((gap) =>
@@ -229,7 +273,7 @@ describe('Summit Comfort demonstration record', () => {
       ).toBe(false);
     }
     expect(escalationsByQuestion.has(questions[6]!.id)).toBe(false);
-    expect(snapshot.escalations).toHaveLength(8);
+    expect(snapshot.escalations).toHaveLength(10);
     expect(snapshot.knowledgeGaps).toHaveLength(17);
   });
 
@@ -249,9 +293,9 @@ describe('Summit Comfort demonstration record', () => {
     });
     expect(resolved?.relatedGapId).toBeUndefined();
     expect(resolved?.resolutionSummary).toContain('not company policy');
-    expect(snapshot.knowledgeClaims).toHaveLength(9);
-    expect(snapshot.approvalDecisions).toHaveLength(5);
-    expect(snapshot.activityEvents).toHaveLength(49);
+    expect(snapshot.knowledgeClaims).toHaveLength(10);
+    expect(snapshot.approvalDecisions).toHaveLength(7);
+    expect(snapshot.activityEvents).toHaveLength(63);
 
     const trace = snapshot.activityEvents.filter(
       ({ correlationId }) => correlationId === resolvedQuestion.correlationId,
@@ -288,14 +332,80 @@ describe('Summit Comfort demonstration record', () => {
     expect(secondLoad).toEqual(firstCreated);
     expect(secondLoad.sourceDocuments).toHaveLength(4);
     expect(secondLoad.sourceReferences).toHaveLength(16);
-    expect(secondLoad.knowledgeClaims).toHaveLength(9);
-    expect(secondLoad.approvalDecisions).toHaveLength(5);
+    expect(secondLoad.knowledgeClaims).toHaveLength(10);
+    expect(secondLoad.approvalDecisions).toHaveLength(7);
     expect(secondLoad.interviewQuestions).toHaveLength(15);
     expect(secondLoad.interviewAnswers).toHaveLength(1);
-    expect(secondLoad.employeeQuestions).toHaveLength(12);
-    expect(secondLoad.answerEligibilityEvaluations).toHaveLength(12);
-    expect(secondLoad.answers).toHaveLength(12);
-    expect(secondLoad.escalations).toHaveLength(8);
-    expect(secondLoad.activityEvents).toHaveLength(49);
+    expect(secondLoad.employeeQuestions).toHaveLength(16);
+    expect(secondLoad.answerEligibilityEvaluations).toHaveLength(16);
+    expect(secondLoad.answers).toHaveLength(16);
+    expect(secondLoad.escalations).toHaveLength(10);
+    expect(secondLoad.activityEvents).toHaveLength(63);
+  });
+
+  it('resets only an active fictional fixture and remains idempotent', () => {
+    const repository = new InMemoryPhaseOneRepository();
+    const service = new PhaseOneService(repository);
+    expect(loadSummitComfortDemo(service).ok).toBe(true);
+    const original = service.getSnapshot();
+    const openEscalation = original.escalations.find(({ status }) => status === 'open');
+    expect(openEscalation).toBeDefined();
+    expect(service.assignEscalation(openEscalation!.id, 'Changed fictional assignee').ok).toBe(
+      true,
+    );
+
+    expect(resetSummitComfortDemo(service).ok).toBe(true);
+    expect(service.getSnapshot()).toEqual(original);
+    expect(resetSummitComfortDemo(service).ok).toBe(true);
+    expect(service.getSnapshot()).toEqual(original);
+
+    const nonDemo = new PhaseOneService(new InMemoryPhaseOneRepository());
+    expect(
+      nonDemo.activateSetup({
+        company: {
+          name: 'Private session company',
+          industry: 'Home services',
+          serviceArea: 'Local area',
+          phone: '555-0100',
+          email: 'owner@example.com',
+          operatingTimezone: 'America/Denver',
+        },
+        role: {
+          title: 'Home-Service Office Manager / Dispatcher',
+          mission: 'Coordinate safe and accurate service operations.',
+          status: 'active',
+          responsibilities: [
+            {
+              title: 'Maintain the schedule',
+              expectedOutcome: 'Every accepted call has an accurate assignment.',
+              frequency: 'Daily',
+              completionEvidence: 'Current dispatch board',
+              status: 'active',
+            },
+          ],
+          authorityBoundaries: [
+            {
+              subject: 'Schedule changes',
+              permissionLevel: 'must-request-approval',
+              limitOrConstraint: 'Owner approval is required.',
+              escalationDestination: 'Owner',
+              notes: 'No automatic authority.',
+            },
+          ],
+          escalationRules: [
+            {
+              trigger: 'An exception requires owner judgment.',
+              destination: 'Owner',
+              urgency: 'same-day',
+              requiredContext: 'Topic and requested decision',
+              expectedResponse: 'Owner records the one-time decision.',
+            },
+          ],
+        },
+      }).ok,
+    ).toBe(true);
+    const privateSnapshot = nonDemo.getSnapshot();
+    expect(resetSummitComfortDemo(nonDemo).ok).toBe(false);
+    expect(nonDemo.getSnapshot()).toEqual(privateSnapshot);
   });
 });

@@ -1,6 +1,6 @@
 # RelayOS user journeys
 
-These are target V1 journeys unless explicitly labeled Phase 1, Phase 2, or Phase 3. They define outcomes and safety gates, not permission to implement later-phase features.
+These are target V1 journeys unless explicitly labeled Phase 1, Phase 2, Phase 3, or Phase 4. They define outcomes and safety gates, not permission to implement later-phase features.
 
 ## Phase 1: owner establishes the role system
 
@@ -78,6 +78,28 @@ At the completed Phase 1–2 boundary there was no employee question box, chat, 
 5. Resolution does not edit the question or answer, approve or create a claim, change approval history, or resolve/dismiss a gap.
 
 **Safety gate:** an operational resolution becomes reusable company guidance only through later source-backed claim review and an explicit approval decision.
+
+## Phase 4: prospect explores the fictional public pilot
+
+1. A prospect opens `/pilot` and sees the one-role Home-Service Office Manager / Dispatcher use case, the approved-knowledge principle, the deterministic firewall, both founding offers, and current limitations.
+2. RelayOS presents a valid public booking link when configured, otherwise a public contact email, otherwise the exact honest reply-to-sharer fallback. It submits no form and reports no fake success.
+3. The prospect enters `/demo`. An empty session loads the fixed Summit Comfort Heating & Air fixture exactly once; an already active fictional fixture is reused without duplication.
+4. Six guided steps explain actual company/role, source/approval, coverage/gap, question, answer/escalation, and improvement-loop records with links to the existing workspaces and actual derived counts.
+5. The discount scenario demonstrates both a cited within-limit answer and an above-limit approval escalation. The technician-late scenario demonstrates approved handling guidance and an escalation when an exact customer commitment exceeds authority.
+6. Reset replaces only the active Summit Comfort fixture with the same validated fictional seed. It does not claim to preserve changes made to that fixture.
+
+**Safety gate:** `/demo` renders only the fixed fictional company. If any non-demo company is already active, the route shows a fail-closed warning without naming, rendering, resetting, or overwriting that session. All public pages warn that real client material requires a controlled private environment and that session data disappears on reload.
+
+## Phase 4: owner prepares a manual pilot delivery
+
+1. In a controlled session, the owner follows `/pilot/intake` to confirm the role, available sources, authority and sensitivity boundaries, desired outcome, and owner interview capacity. Checks remain local to the current rendered page and are not project records.
+2. The owner completes the existing source, interview, review, employee-question, and escalation workflows; Phase 4 does not bypass their provenance or approval rules.
+3. The owner opens `/report` to inspect and print/save a Role Transfer Report built only from actual current-session records. Recommended priorities come only from open critical/high gaps and unresolved records.
+4. The owner opens `/manual` to print/save a concise operating summary. Substantive guidance comes only from current approved employee-visible claims; authority and escalation definitions and owner-facing gaps are separately labeled.
+5. The owner downloads an allowlisted JSON handoff. Raw source text is absent by default; adding it requires selecting the option and separately confirming the inclusion. Raw sensitive question values remain excluded in both modes.
+6. The owner follows `/pilot/delivery` for walkthrough and delivery checks and records the next review date outside RelayOS.
+
+**Safety gate:** report, manual, export, and checklist routes have no authentication or durable storage. The handoff download is not an import or backup, and downloaded artifacts leave RelayOS controls. Real-client work and delivery require separately agreed private handling.
 
 ## Future: work improves the system
 

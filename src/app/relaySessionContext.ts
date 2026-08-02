@@ -40,8 +40,10 @@ export interface RelaySessionValue {
   readonly employeeVisibleKnowledge: readonly EmployeeVisibleKnowledge[];
   readonly coverageResult: DomainResult<readonly TopicCoverage[]>;
   readonly interviewQueue: readonly InterviewQuestion[];
+  readonly currentTime: () => string;
   readonly completeSetup: (draft: SetupDraft) => SetupActionResult;
   readonly loadDemo: () => SetupActionResult;
+  readonly resetDemo: () => SetupActionResult;
   readonly createSourceReference: (input: SourceReferenceInput) => DomainResult<SourceReference>;
   readonly createSourceDocument: (input: SourceDocumentInput) => DomainResult<SourceDocument>;
   readonly updateSourceDocumentDraft: (

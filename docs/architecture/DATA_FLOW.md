@@ -1,16 +1,16 @@
 # RelayOS data flow
 
-This document separates the Phase 3 implementation from later V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); there is still no persistence, file-ingestion, model, semantic-retrieval, identity, or messaging pipeline.
+This document separates the Phase 4 implementation from later V1 flows. Entity definitions live in the [domain model](DOMAIN_MODEL.md); there is still no persistence, file-ingestion, model, semantic-retrieval, identity, or messaging pipeline.
 
-## Phase 3 session boundary
+## Phase 4 session boundary
 
 ```text
 browser request -> Cloudflare Pages static asset / SPA fallback
-                -> React Router -> Phase 3 route
+                -> React Router -> Phase 4 route
 
 one React context
   -> one in-memory repository for the page session
-  -> existing domain service validates every Phase 0-3 scoped write and lifecycle operation
+  -> existing domain service validates every Phase 0-4 scoped write and lifecycle operation
   -> defensive repository reads
 ```
 
@@ -117,6 +117,29 @@ open Escalation
 
 Destination comes only from a matching structured boundary/rule or an explicitly configured owner fallback. Required context comes from typed fields and is minimized; raw sensitive question text is not copied into events or routing metadata. Resolution does not create or approve a claim, mutate approval history, edit the question/answer, or resolve/dismiss a related gap. Approved-knowledge reconciliation resolves a question-linked gap only after the gates relevant to its original deficiency pass; another same-topic claim cannot erase a continuing conflict, provenance, unsupported-mode, or authority problem. If a resolution should become reusable guidance, the owner starts the existing source/interview/review flow.
 
+## Phase 4 pilot, report, manual, and handoff flow
+
+```text
+public /pilot
+  -> static offer + limitations + validated public booking/email action
+  -> /demo
+  -> load fixed fictional Summit Comfort seed only when session is empty
+  -> reuse the exact fixture when already active
+  -> fail closed without rendering when a non-demo company is active
+
+current defensive snapshot
+  -> pure actual-count / approved-guidance / priority projections
+  -> six-step fictional demo summary OR print report OR approved-only manual
+  -> allowlisted handoff JSON
+     -> source metadata only by default
+     -> source text only after option + separate confirmation
+     -> browser download; no repository write and no import
+```
+
+The fictional reset operation validates both current and replacement scope against the fixed Summit Comfort IDs before atomically replacing the in-memory snapshot. It cannot reset or overwrite another company. Report and manual dates receive the application clock; business recommendations are restricted to open critical/high gaps and actual unresolved records. Manual substantive guidance is selected through the existing employee-visible approved-knowledge boundary, while structured authority/escalation definitions and owner-facing gaps are presented separately.
+
+The export is an explicit allowlist, not a redacted serialization of repository internals. Default output omits source content and line text, reference excerpts, raw question text, free-text question context, employee labels, raw escalation resolution text, environment values, and browser implementation state. Selecting source-text inclusion adds only the documented source fields and never adds raw question values. The download does not change application state or provide durability inside RelayOS.
+
 ## Future employee-signal gap-to-improvement flow (not Phase 3)
 
 ```text
@@ -141,8 +164,8 @@ Only approved knowledge can support an employee-visible `TrainingScenario`. A `S
 - Domain policies decide visibility, escalation, and publication.
 - A later server layer must authorize every read/write and mediate the future `ModelGateway`.
 - Approval decisions and meaningful activity events append; corrections create new records or revisions.
-- Phase 3 activity metadata is safe traceability data, not policy evidence or analytics, and excludes raw sensitive question/source content.
+- Phase 3 activity metadata is safe traceability data, not policy evidence or analytics, and excludes raw sensitive question/source content; Phase 4 exports only a safe allowlisted projection.
 - Source documents may be superseded or withdrawn, but historical locators and decisions remain addressable according to retention policy.
-- Demo adapters use fixed local data and the same domain gates, never production credentials.
+- Demo adapters use fixed local data and the same domain gates, never production credentials; public demo rendering and reset reject non-demo scope.
 
 See [Architecture](../../ARCHITECTURE.md), [AI boundaries](AI_BOUNDARIES.md), and [Security](SECURITY.md).
