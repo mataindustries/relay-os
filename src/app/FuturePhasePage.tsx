@@ -10,7 +10,7 @@ export function FuturePhasePage({ title, description }: FuturePhasePageProps) {
       <h1 id="future-page-title">{title}</h1>
       <p className="future-page-description">{description}</p>
       <p className="future-page-note">
-        This route is present only to establish the RelayOS information architecture.
+        This route is present only to establish the RoleKeep information architecture.
       </p>
     </section>
   );

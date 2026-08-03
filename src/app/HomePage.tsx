@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 const operatingLoop = [
   'An employee asks an operational question.',
-  'RelayOS retrieves approved company knowledge.',
+  'RoleKeep retrieves approved company knowledge.',
   'The system answers from that knowledge or escalates.',
   'Missing or conflicting required knowledge becomes a knowledge gap.',
   'A retained owner interview answer can become a visibly unapproved proposal.',
@@ -15,11 +15,11 @@ export function HomePage() {
     <div className="home-page">
       <section className="hero" aria-labelledby="home-title">
         <p className="phase-label">Phase 4 · Pilot Launch Package</p>
-        <h1 id="home-title">RelayOS</h1>
+        <h1 id="home-title">RoleKeep</h1>
         <p className="positioning">Transfer the role, not just the instructions.</p>
         <p className="hero-summary">
-          RelayOS packages its deterministic, source-backed role-transfer loop for a clear fictional
-          demonstration and hands-on founding-client delivery.
+          RoleKeep packages its deterministic, source-backed role-transfer loop for a clear
+          fictional demonstration and hands-on founding-client delivery.
         </p>
         <div className="button-row">
           <Link className="primary-link" to="/pilot">
@@ -39,7 +39,7 @@ export function HomePage() {
         <h2 id="approved-title">Generated output is never company policy.</h2>
         <p>
           Employee-visible answers may use only owner-approved knowledge. When evidence is absent,
-          conflicting, sensitive, or uncertain, RelayOS must escalate instead of inventing an
+          conflicting, sensitive, or uncertain, RoleKeep must escalate instead of inventing an
           answer.
         </p>
       </section>

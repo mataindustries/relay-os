@@ -189,7 +189,7 @@ function StructuredContextFields({
     case 'policy-lookup':
       return (
         <p className="empty-state">
-          No additional context is required. RelayOS retrieves by the topic selected above, not by
+          No additional context is required. RoleKeep retrieves by the topic selected above, not by
           interpreting the question text.
         </p>
       );
@@ -286,7 +286,7 @@ function StructuredContextFields({
             </label>
           </div>
           <p className="record-meta">
-            The amount and currency are evaluated structurally. RelayOS never parses a limit from
+            The amount and currency are evaluated structurally. RoleKeep never parses a limit from
             the question text.
           </p>
         </>
@@ -479,7 +479,7 @@ function QuestionOutcome({
         <h3 id="approved-guidance-title">
           {answer.status === 'delivered'
             ? 'Deterministic cited response'
-            : 'Why RelayOS did not deliver guidance'}
+            : 'Why RoleKeep did not deliver guidance'}
         </h3>
         <p>{answer.responseText}</p>
         {failedGates.length > 0 ? (
@@ -586,7 +586,7 @@ function QuestionOutcome({
         <section className="employee-escalation-summary" aria-labelledby="escalation-summary-title">
           <h3 id="escalation-summary-title">Owner escalation opened</h3>
           <p>
-            RelayOS opened escalation <strong>{escalation.id}</strong> for{' '}
+            RoleKeep opened escalation <strong>{escalation.id}</strong> for{' '}
             {readable(escalation.reason)} and routed it to {escalation.destination}.
           </p>
           <p>
@@ -642,6 +642,9 @@ export function EmployeePage() {
         <p className="phase-label">Phase 3 · Employee Question-to-System</p>
         <h1 id="employee-title">No active role knowledge</h1>
         <p>An owner must activate the one company and role before questions can be evaluated.</p>
+        <aside className="sample-workspace-callout" role="note">
+          <Link to="/demo">Start the sample HVAC workspace to explore this screen.</Link>
+        </aside>
         <Link className="text-link" to="/setup">
           Go to setup
         </Link>
@@ -737,8 +740,8 @@ export function EmployeePage() {
         <p className="phase-label">Phase 3 · Employee Question-to-System</p>
         <h1>{role.title}</h1>
         <p className="workspace-lede">
-          Ask a structured operational question. RelayOS applies a deterministic policy firewall and
-          either returns cited approved guidance or fails closed.
+          Ask a structured operational question. RoleKeep applies a deterministic policy firewall
+          and either returns cited approved guidance or fails closed.
         </p>
         <p>
           <strong>Role mission:</strong> {role.mission}
@@ -758,10 +761,10 @@ export function EmployeePage() {
         <aside className="sensitive-data-warning" id="sensitive-data-warning">
           <strong>Do not paste sensitive values.</strong> Do not enter passwords, access codes,
           payment card or bank details, health details, or unnecessary personal information. Select
-          a sensitivity category so RelayOS can fail closed.
+          a sensitivity category so RoleKeep can fail closed.
         </aside>
         <aside className="professional-advice-warning">
-          RelayOS provides only reviewed company operating guidance. It is not legal, medical,
+          RoleKeep provides only reviewed company operating guidance. It is not legal, medical,
           financial, safety, or emergency professional advice and does not replace emergency
           services or an authorized professional.
         </aside>

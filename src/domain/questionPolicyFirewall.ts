@@ -541,9 +541,9 @@ export interface PolicyFirewallDecision {
 function withheldText(result: AnswerEligibilityResult): string {
   switch (result) {
     case 'withheld-missing-knowledge':
-      return 'Answer withheld\nRelayOS has no current approved company guidance for the selected topic. Human review is required.';
+      return 'Answer withheld\nRoleKeep has no current approved company guidance for the selected topic. Human review is required.';
     case 'withheld-conflicting-knowledge':
-      return 'Answer withheld\nRelayOS found an explicit conflict in the selected topic. Human review is required.';
+      return 'Answer withheld\nRoleKeep found an explicit conflict in the selected topic. Human review is required.';
     case 'withheld-invalid-provenance':
       return 'Answer withheld\nCurrent guidance did not pass source and approval provenance checks. Human review is required.';
     case 'withheld-sensitive':
@@ -555,7 +555,7 @@ function withheldText(result: AnswerEligibilityResult): string {
     case 'answer-eligible':
     case 'escalation-required':
     case 'prohibited':
-      return 'Answer withheld\nRelayOS cannot deliver guidance for this outcome.';
+      return 'Answer withheld\nRoleKeep cannot deliver guidance for this outcome.';
   }
 }
 
@@ -656,7 +656,7 @@ export function evaluateQuestionPolicy(
     answerStatus = 'escalated';
     answerMode = 'known-escalation';
     responseText =
-      'Owner approval\nA matching structured authority boundary or escalation rule requires human action. RelayOS has withheld action guidance.';
+      'Owner approval\nA matching structured authority boundary or escalation rule requires human action. RoleKeep has withheld action guidance.';
     escalationReason =
       question.requestType === 'emergency-action'
         ? 'emergency'

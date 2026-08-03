@@ -30,7 +30,7 @@ const DELIVERY_ITEMS = [
   'Manual generated',
   'Employee walkthrough completed',
   'Owner walkthrough completed',
-  'Next review date recorded outside RelayOS',
+  'Next review date recorded outside RoleKeep',
 ] as const;
 
 export function PilotChecklistPage({ kind }: { readonly kind: 'intake' | 'delivery' }) {

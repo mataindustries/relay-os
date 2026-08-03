@@ -79,7 +79,7 @@ function createPrivateService(): PhaseOneService {
 }
 
 describe('public pilot page', () => {
-  it('renders both founding offers, the booking CTA, and honest limitations without a form', () => {
+  it('renders both branded offers, product proof, the booking CTA, and honest boundaries', () => {
     const { container } = render(
       <MemoryRouter>
         <PilotPage
@@ -89,25 +89,42 @@ describe('public pilot page', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Transfer the role, not just the instructions.')).toBeInTheDocument();
+    expect(screen.getByText('Transfer the role. Keep the judgment.')).toBeInTheDocument();
+    const primaryOffer = screen
+      .getByRole('heading', { name: 'RoleKeep Founding Pilot — $750' })
+      .closest('article');
+    expect(primaryOffer).toHaveClass('offer-card-primary');
     expect(
-      screen.getByRole('heading', { name: 'RelayOS Role Transfer Sprint — $1,250' }),
+      screen.getByRole('heading', { name: 'RoleKeep Role Transfer Sprint — $1,250' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Founding Pilot — $750' })).toBeInTheDocument();
+    expect(screen.getByText('Up to eight priority decision areas')).toBeInTheDocument();
     expect(screen.getByText('Up to 12 core procedures or decision areas')).toBeInTheDocument();
     expect(screen.getByText('Two weeks of guided refinement')).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Book a founding-pilot conversation' }),
+      screen.getByRole('link', { name: 'Discuss your highest-interruption role' }),
     ).toHaveAttribute('href', 'https://booking.example/founding-pilot');
     expect(
       screen.getByRole('heading', {
-        name: 'A delivery tool and deterministic demonstration—not production SaaS.',
+        name: 'A guided delivery service with its limits stated plainly.',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Honest limitations')).toBeInTheDocument();
-    expect(screen.getByText(/No guaranteed savings, productivity, compliance/)).toBeInTheDocument();
+    expect(screen.getByText('Current pilot boundaries')).toBeInTheDocument();
+    expect(screen.getByText('Uses a fictional HVAC company and sample data.')).toBeInTheDocument();
+    for (const link of [
+      ['Explore the guided sample', '/demo'],
+      ['See the employee question flow', '/employee'],
+      ['See the owner escalation queue', '/escalations'],
+      ['Preview the Role Transfer Report', '/report'],
+      ['Preview the Operating Manual', '/manual'],
+    ] as const) {
+      expect(screen.getByRole('link', { name: new RegExp(link[0]) })).toHaveAttribute(
+        'href',
+        link[1],
+      );
+    }
     expect(container.querySelector('form')).toBeNull();
     expect(screen.queryByText(/successfully submitted/i)).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent('RelayOS');
   });
 
   it('uses the configured email when no valid booking URL exists', () => {
@@ -117,10 +134,9 @@ describe('public pilot page', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Email about a founding pilot' })).toHaveAttribute(
-      'href',
-      'mailto:hello@example.com',
-    );
+    expect(
+      screen.getByRole('link', { name: 'Discuss your highest-interruption role' }),
+    ).toHaveAttribute('href', 'mailto:hello@example.com');
   });
 
   it('shows the exact honest fallback when neither CTA value is configured', () => {
@@ -178,6 +194,7 @@ describe('guided fictional demo', () => {
     expect(screen.getByText('Approved handling guidance')).toBeInTheDocument();
     expect(screen.getByText('Commitment exceeds authority')).toBeInTheDocument();
     expect(screen.getAllByText(/No knowledge gap was created/).length).toBeGreaterThanOrEqual(4);
+    expect(document.body).not.toHaveTextContent('RelayOS');
     expect(emptyService.getSnapshot()).toEqual(createSummitComfortDemoSnapshot());
   });
 
@@ -339,7 +356,7 @@ describe('pilot checklists', () => {
       'Demo scenarios tested',
       'Report generated',
       'Manual generated',
-      'Next review date recorded outside RelayOS',
+      'Next review date recorded outside RoleKeep',
     ]) {
       expect(screen.getByRole('checkbox', { name: item })).toBeInTheDocument();
     }

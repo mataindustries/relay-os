@@ -8,7 +8,7 @@ import './app/styles.css';
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
-  throw new Error('RelayOS requires an element with the id "root".');
+  throw new Error('RoleKeep requires an element with the id "root".');
 }
 
 createRoot(rootElement).render(

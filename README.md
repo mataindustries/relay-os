@@ -31,17 +31,19 @@ non-sensitive data.
 
 ## Public CTA configuration
 
-The pilot page accepts either public Vite build variable:
+The pilot page accepts the RoleKeep public Vite build variables:
 
 ```text
-VITE_RELAYOS_BOOKING_URL=https://example.com/book
-VITE_RELAYOS_CONTACT_EMAIL=owner@example.com
+VITE_ROLEKEEP_BOOKING_URL=https://example.com/book
+VITE_ROLEKEEP_CONTACT_EMAIL=owner@example.com
 ```
 
-A valid HTTP(S) booking URL takes precedence, then a configured email address. If
-neither is valid, the page honestly asks the visitor to reply to the person who
-shared the demo. Vite-exposed values are public browser configuration and must never
-contain secrets.
+The existing `VITE_RELAYOS_BOOKING_URL` and `VITE_RELAYOS_CONTACT_EMAIL` names remain
+supported for backward compatibility; RoleKeep values take precedence when both are
+present. A valid HTTP(S) booking URL takes precedence, then a configured email
+address. If neither is valid, the page honestly asks the visitor to reply to the
+person who shared the demo. Vite-exposed values are public browser configuration and
+must never contain secrets.
 
 ## Local development
 

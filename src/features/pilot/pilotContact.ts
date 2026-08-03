@@ -29,7 +29,11 @@ export function resolvePilotContactAction(
 ): PilotContactAction {
   const bookingUrl = safeBookingUrl(configuration.bookingUrl);
   if (bookingUrl !== null) {
-    return { kind: 'booking', href: bookingUrl, label: 'Book a founding-pilot conversation' };
+    return {
+      kind: 'booking',
+      href: bookingUrl,
+      label: 'Discuss your highest-interruption role',
+    };
   }
 
   const contactEmail = safeEmail(configuration.contactEmail);
@@ -37,7 +41,7 @@ export function resolvePilotContactAction(
     return {
       kind: 'email',
       href: `mailto:${contactEmail}`,
-      label: 'Email about a founding pilot',
+      label: 'Discuss your highest-interruption role',
     };
   }
 

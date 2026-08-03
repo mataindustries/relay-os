@@ -208,7 +208,7 @@ export function OwnerPage() {
           <div>
             <h2 id="coverage-title">Operational knowledge coverage</h2>
             <p>
-              Coverage means evidence is explicitly assigned and reviewed within RelayOS. It is not
+              Coverage means evidence is explicitly assigned and reviewed within RoleKeep. It is not
               legal compliance, a safety certification, or a guarantee of operational quality.
             </p>
           </div>

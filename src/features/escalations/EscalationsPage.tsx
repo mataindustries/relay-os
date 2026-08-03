@@ -267,7 +267,7 @@ function EscalationCard({ escalation }: { readonly escalation: Escalation }) {
       </h2>
       <p className="workspace-lede">
         {question
-          ? `An employee submitted a ${readable(question.requestType)}. RelayOS routed it without inventing policy.`
+          ? `An employee submitted a ${readable(question.requestType)}. RoleKeep routed it without inventing policy.`
           : 'The related question record is unavailable, so this escalation remains visible for owner review.'}
       </p>
 
@@ -422,6 +422,9 @@ export function EscalationsPage() {
         <p className="phase-label">Phase 3 · Owner escalation queue</p>
         <h1 id="escalations-title">No active role escalation queue</h1>
         <p>Complete setup or load the fictional demonstration before reviewing escalations.</p>
+        <aside className="sample-workspace-callout" role="note">
+          <Link to="/demo">Start the sample HVAC workspace to explore this screen.</Link>
+        </aside>
         <Link className="text-link" to="/setup">
           Go to setup
         </Link>

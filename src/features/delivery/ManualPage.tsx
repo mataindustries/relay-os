@@ -21,6 +21,9 @@ export function ManualPage() {
         <p className="phase-label">Phase 4 · Operating Manual summary</p>
         <h1 id="manual-empty-title">No active role manual</h1>
         <p>Load the fictional demo or complete setup before organizing approved records.</p>
+        <aside className="sample-workspace-callout" role="note">
+          <Link to="/demo">Start the sample HVAC workspace to explore this screen.</Link>
+        </aside>
         <Link className="primary-link" to="/demo">
           Load the fictional demo
         </Link>
@@ -34,7 +37,7 @@ export function ManualPage() {
   return (
     <article className="print-document manual-document">
       <header className="print-document-header">
-        <p className="phase-label">RelayOS · Operating Manual summary</p>
+        <p className="phase-label">RoleKeep · Operating Manual summary</p>
         <h1>{role.title}</h1>
         <p className="print-document-subtitle">{company.name}</p>
         <p>

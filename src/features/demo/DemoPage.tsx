@@ -164,15 +164,15 @@ export function DemoPage() {
   if (snapshot.company !== null && !isFictionalDemo) {
     return (
       <section className="workspace-page demo-blocked" aria-labelledby="demo-blocked-title">
-        <p className="phase-label">Phase 4 · Fictional public demo</p>
+        <p className="phase-label">Sample HVAC workspace</p>
         <h1 id="demo-blocked-title">The public demo is isolated from this session.</h1>
         <p>
-          This browser session already contains a non-demo workspace. RelayOS will not display or
+          This browser session already contains a non-demo workspace. RoleKeep will not display or
           overwrite those records on a public demo route. Reload in a separate public-demo session
           to use Summit Comfort.
         </p>
         <Link className="primary-link" to="/pilot">
-          Return to the pilot page
+          Return to the RoleKeep overview
         </Link>
       </section>
     );
@@ -181,7 +181,7 @@ export function DemoPage() {
   if (!isFictionalDemo || !countsResult.ok) {
     return (
       <section className="workspace-page" aria-labelledby="demo-loading-title">
-        <p className="phase-label">Phase 4 · Fictional public demo</p>
+        <p className="phase-label">Sample HVAC workspace</p>
         <h1 id="demo-loading-title">Loading the Summit Comfort demonstration…</h1>
         <p>No client record is shown on this public route.</p>
       </section>
@@ -215,7 +215,7 @@ export function DemoPage() {
     {
       title: 'Coverage and gaps',
       value:
-        'RelayOS maps explicit evidence across the role’s checked-in operating topics and records incomplete work as a gap without claiming a readiness score.',
+        'RoleKeep maps explicit evidence across the role’s checked-in operating topics and records incomplete work as a gap without claiming a readiness score.',
       href: '/owner#coverage-title',
       link: 'Inspect coverage',
       count: `${counts.coverageTopics} tracked topics · ${counts.openGaps} open gaps`,
@@ -226,7 +226,7 @@ export function DemoPage() {
     {
       title: 'Employee question',
       value:
-        'The employee submits an explicit topic, request type, sensitivity selection, and typed context before RelayOS evaluates the request.',
+        'The employee submits an explicit topic, request type, sensitivity selection, and typed context before RoleKeep evaluates the request.',
       href: '/employee',
       link: 'Open the employee workspace',
       count: `${counts.employeeQuestions} structured questions · ${counts.answers} recorded outcomes`,
@@ -237,7 +237,7 @@ export function DemoPage() {
     {
       title: 'Safe answer or escalation',
       value:
-        'Ten deterministic gates either admit current approved guidance with citations or produce a prohibited, withheld, or explicitly routed escalation outcome.',
+        'Ten explicit safety gates either admit current approved guidance with citations or produce a prohibited, withheld, or clearly routed escalation outcome.',
       href: '/escalations',
       link: 'Open the escalation queue',
       count: `${counts.deliveredAnswers} delivered answers · ${counts.escalations} escalations · ${counts.activeEscalations} active`,
@@ -289,11 +289,11 @@ export function DemoPage() {
   return (
     <div className="workspace-page guided-demo-page">
       <header className="workspace-header demo-header">
-        <p className="phase-label">Phase 4 · Six-step guided demo</p>
+        <p className="phase-label">Guided sample workspace</p>
         <h1>Summit Comfort Heating &amp; Air</h1>
         <p className="workspace-lede">
-          Follow one fixed, deterministic Home-Service Office Manager / Dispatcher workspace from
-          source material through a safe employee answer and owner-controlled improvement loop.
+          Follow one fixed Home-Service Office Manager / Dispatcher workspace from source material
+          through a safe employee answer and owner-controlled improvement loop.
         </p>
         <p className="fictional-notice" role="note">
           Fictional demonstration data only — no real company, employee, customer, or operating
@@ -316,7 +316,7 @@ export function DemoPage() {
             Reset fictional demo
           </button>
           <Link className="text-link" to="/pilot">
-            Return to pilot page
+            Return to the RoleKeep overview
           </Link>
         </div>
         {feedback ? <p className="form-feedback success">{feedback}</p> : null}
@@ -324,9 +324,9 @@ export function DemoPage() {
 
       <aside className="public-data-warning">
         <strong>Current session only.</strong> Demo records disappear on reload. Reset replaces only
-        the deterministic fictional fixture and discards changes made to those fictional records; it
-        never claims to preserve user-created data. Use only fictional or non-sensitive data in a
-        public deployment.
+        the fixed fictional fixture and discards changes made to those fictional records; it never
+        claims to preserve user-created data. Use only fictional or non-sensitive data in a public
+        deployment.
       </aside>
 
       <section className="demo-summary" aria-labelledby="demo-summary-title">
@@ -398,7 +398,7 @@ export function DemoPage() {
         <h2 id="late-scenario-title">A technician is late and the customer is upset.</h2>
         <p>
           Approved guidance supports a revised-window update. A request to promise an exact arrival
-          time exceeds the recorded boundary and escalates to the service manager; RelayOS makes no
+          time exceeds the recorded boundary and escalates to the service manager; RoleKeep makes no
           unsupported promise.
         </p>
         <div className="scenario-grid">

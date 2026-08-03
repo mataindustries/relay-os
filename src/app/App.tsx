@@ -1,4 +1,4 @@
-import { NavLink, Outlet, Route, Routes } from 'react-router-dom';
+import { Link, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 
 import type { PhaseOneService } from '../domain';
 import { DemoPage } from '../features/demo';
@@ -12,14 +12,18 @@ import { ReviewPage } from '../features/review';
 import { SetupRoute } from '../features/setup';
 import { SourcePage } from '../features/sources';
 import { FuturePhasePage } from './FuturePhasePage';
-import { HomePage } from './HomePage';
 import { NotFoundPage } from './NotFoundPage';
 import { RelaySessionProvider } from './RelaySessionContext';
 
-const navigation = [
-  { to: '/', label: 'Home' },
-  { to: '/pilot', label: 'Pilot' },
-  { to: '/demo', label: 'Demo' },
+const publicNavigation = [
+  { to: '/#how-it-works', label: 'How it works' },
+  { to: '/demo', label: 'Sample demo' },
+  { to: '/#pricing', label: 'Pricing' },
+  { to: '/#contact', label: 'Contact' },
+] as const;
+
+const workspaceNavigation = [
+  { to: '/demo', label: 'Sample demo' },
   { to: '/setup', label: 'Setup' },
   { to: '/owner', label: 'Owner' },
   { to: '/escalations', label: 'Escalations' },
@@ -27,40 +31,62 @@ const navigation = [
   { to: '/interview', label: 'Interview' },
   { to: '/employee', label: 'Employee' },
   { to: '/review', label: 'Review' },
+  { to: '/report', label: 'Report' },
+  { to: '/manual', label: 'Manual' },
   { to: '/training', label: 'Training' },
   { to: '/settings', label: 'Settings' },
 ] as const;
 
 function AppShell() {
+  const { pathname } = useLocation();
+  const isPublicRoute = pathname === '/' || pathname === '/pilot' || pathname === '/demo';
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
       <header className="site-header">
-        <div className="header-inner">
-          <NavLink className="wordmark" to="/" aria-label="RelayOS home">
-            RelayOS
-          </NavLink>
-          <nav className="primary-nav" aria-label="Primary navigation">
-            {navigation.map(({ to, label }) => (
-              <NavLink
-                className={({ isActive }) => (isActive ? 'nav-link nav-link-active' : 'nav-link')}
-                end={to === '/'}
-                key={to}
-                to={to}
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
+        <div className={isPublicRoute ? 'header-inner public-header-inner' : 'header-inner'}>
+          <Link className="wordmark" to="/" aria-label="RoleKeep home">
+            RoleKeep
+          </Link>
+          {isPublicRoute ? (
+            <nav
+              className="primary-nav public-nav"
+              aria-label="Public navigation"
+              data-navigation="public"
+            >
+              {publicNavigation.map(({ to, label }) => (
+                <Link className="nav-link" key={to} to={to}>
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          ) : (
+            <nav
+              className="primary-nav workspace-nav"
+              aria-label="Workspace navigation"
+              data-navigation="workspace"
+            >
+              {workspaceNavigation.map(({ to, label }) => (
+                <NavLink
+                  className={({ isActive }) => (isActive ? 'nav-link nav-link-active' : 'nav-link')}
+                  key={to}
+                  to={to}
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </nav>
+          )}
         </div>
       </header>
       <main id="main-content" className="main-content">
         <Outlet />
       </main>
       <footer className="site-footer">
-        <p>RelayOS · Phase 4 pilot launch package · session-only</p>
+        <p>RoleKeep · Founding pilot · Sample data only on the public demo</p>
       </footer>
     </div>
   );
@@ -70,7 +96,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index element={<HomePage />} />
+        <Route index element={<PilotPage />} />
         <Route path="/pilot" element={<PilotPage />} />
         <Route path="/demo" element={<DemoPage />} />
         <Route path="/report" element={<ReportPage />} />

@@ -86,7 +86,7 @@ export const OPERATIONAL_TOPICS: readonly OperationalTopic[] = Object.freeze([
     primaryQuestion: {
       key: 'emergency-primary',
       prompt: 'Does the company accept urgent or emergency service requests?',
-      rationale: 'RelayOS needs an explicit answer before documenting emergency handling.',
+      rationale: 'RoleKeep needs an explicit answer before documenting emergency handling.',
       whatItUnlocks: 'If yes, focused questions about qualifying conditions and dispatch context.',
       answerType: 'yes-no',
     },

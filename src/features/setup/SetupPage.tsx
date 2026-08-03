@@ -555,7 +555,7 @@ function RoleStep({ draft, errors, onChange }: RoleStepProps) {
   return (
     <fieldset className="setup-step">
       <legend>Operational role</legend>
-      <p>RelayOS supports one role. Set it to active only when this definition is ready to use.</p>
+      <p>RoleKeep supports one role. Set it to active only when this definition is ready to use.</p>
       <div className="setup-form-grid">
         <TextField
           id="setup-role-title"

@@ -275,7 +275,7 @@ export function InterviewPage() {
           <h2 id="active-question-title">{activeQuestion.prompt}</h2>
           <dl className="interview-rationale">
             <div>
-              <dt>Why RelayOS is asking</dt>
+              <dt>Why RoleKeep is asking</dt>
               <dd>{activeQuestion.rationale}</dd>
             </div>
             <div>

@@ -139,7 +139,7 @@ function ExtractionForm({ reference }: { readonly reference: SourceReference }) 
   return (
     <form className="stacked-form extraction-form" onSubmit={submit}>
       <p className="unapproved-notice">
-        You are selecting the evidence and wording. RelayOS has not interpreted this source.
+        You are selecting the evidence and wording. RoleKeep has not interpreted this source.
       </p>
       <label>
         Operational topic
@@ -417,7 +417,7 @@ export function SourcePage() {
         It is not uploaded, transmitted, saved to browser storage, or independently verified.
       </aside>
       <p className="unapproved-notice">
-        RelayOS does not automatically interpret pasted documents. You assign the evidence and
+        RoleKeep does not automatically interpret pasted documents. You assign the evidence and
         topic; every extracted claim remains unapproved until owner review.
       </p>
 

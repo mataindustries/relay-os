@@ -62,7 +62,7 @@ export function PilotExportPanel() {
       <h2 id="pilot-export-title">Export the pilot package</h2>
       <p>
         Download an allowlisted JSON handoff of the actual current session. Export does not change
-        RelayOS records and is not durable persistence. Phase 4 provides no import.
+        RoleKeep records and is not durable persistence. Phase 4 provides no import.
       </p>
       <form className="stacked-form export-form" onSubmit={exportPackage}>
         <label className="checkbox-row">

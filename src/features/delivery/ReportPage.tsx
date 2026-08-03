@@ -33,6 +33,9 @@ export function ReportPage() {
         <p className="phase-label">Phase 4 · Role Transfer Report</p>
         <h1 id="report-empty-title">No active role report</h1>
         <p>Load the fictional demo or complete setup before generating an actual-record report.</p>
+        <aside className="sample-workspace-callout" role="note">
+          <Link to="/demo">Start the sample HVAC workspace to explore this screen.</Link>
+        </aside>
         <div className="button-row">
           <Link className="primary-link" to="/demo">
             Load the fictional demo
@@ -63,7 +66,7 @@ export function ReportPage() {
   return (
     <article className="print-document report-document">
       <header className="print-document-header">
-        <p className="phase-label">RelayOS · Role Transfer Report</p>
+        <p className="phase-label">RoleKeep · Role Transfer Report</p>
         <h1>{company.name}</h1>
         <p className="print-document-subtitle">{role.title}</p>
         <p>
